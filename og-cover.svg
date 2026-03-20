@@ -1,0 +1,57 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="64" x2="1030" y2="584" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCF8F2"/>
+      <stop offset="1" stop-color="#F0ECE4"/>
+    </linearGradient>
+    <radialGradient id="glowLeft" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(196 120) rotate(24.12) scale(322.984 229.131)">
+      <stop stop-color="#FFB89A" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#FFB89A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowRight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1028 122) rotate(151.55) scale(288.093 222.727)">
+      <stop stop-color="#A8E2D5" stop-opacity="0.88"/>
+      <stop offset="1" stop-color="#A8E2D5" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#17191C"/>
+      <stop offset="1" stop-color="#404650"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F25F3A"/>
+      <stop offset="1" stop-color="#FF9F7D"/>
+    </linearGradient>
+    <filter id="shadow" x="188" y="65" width="824" height="500" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="28"/>
+      <feGaussianBlur stdDeviation="24"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0901961 0 0 0 0 0.0980392 0 0 0 0 0.109804 0 0 0 0.12 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_2"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_2" result="shape"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" rx="40" fill="url(#bg)"/>
+  <ellipse cx="196" cy="120" rx="278" ry="168" fill="url(#glowLeft)"/>
+  <ellipse cx="1008" cy="132" rx="236" ry="178" fill="url(#glowRight)"/>
+  <g filter="url(#shadow)">
+    <rect x="236" y="113" width="728" height="404" rx="32" fill="white" fill-opacity="0.86"/>
+    <rect x="236.5" y="113.5" width="727" height="403" rx="31.5" stroke="white" stroke-opacity="0.88"/>
+    <rect x="284" y="157" width="88" height="88" rx="24" fill="url(#brand)"/>
+    <text x="328" y="214" fill="white" font-family="Inter, Arial, sans-serif" font-size="36" font-weight="800" text-anchor="middle">R</text>
+    <rect x="284" y="273" width="120" height="34" rx="17" fill="#FFF4EF"/>
+    <circle cx="306" cy="290" r="6" fill="url(#accent)"/>
+    <text x="323" y="298" fill="#444B55" font-family="'Noto Sans SC', Inter, Arial, sans-serif" font-size="18" font-weight="700">Creative Suite</text>
+    <text x="284" y="370" fill="#17191C" font-family="'Noto Sans SC', Inter, Arial, sans-serif" font-size="66" font-weight="800">新媒体图文编辑器</text>
+    <text x="284" y="424" fill="#5F6672" font-family="'Noto Sans SC', Inter, Arial, sans-serif" font-size="28" font-weight="500">公众号排版、小红书图文与封面创作工作台</text>
+    <g opacity="0.98">
+      <rect x="710" y="176" width="196" height="108" rx="24" fill="#FFF7F3"/>
+      <rect x="710" y="302" width="196" height="108" rx="24" fill="#F2FBF8"/>
+      <rect x="710" y="428" width="196" height="48" rx="24" fill="#17191C"/>
+      <text x="736" y="214" fill="#8A93A1" font-family="'Noto Sans SC', Inter, Arial, sans-serif" font-size="18" font-weight="700">工作台</text>
+      <text x="736" y="254" fill="#17191C" font-family="Inter, Arial, sans-serif" font-size="36" font-weight="800">3</text>
+      <text x="736" y="340" fill="#8A93A1" font-family="'Noto Sans SC', Inter, Arial, sans-serif" font-size="18" font-weight="700">主题样式</text>
+      <text x="736" y="380" fill="#17191C" font-family="Inter, Arial, sans-serif" font-size="36" font-weight="800">44+</text>
+      <text x="809" y="459" fill="white" font-family="'Noto Sans SC', Inter, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="middle">在线创作 · 即开即用</text>
+    </g>
+  </g>
+</svg>

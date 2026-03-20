@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://xiaomingtkp.github.io/newmedia/sitemap.xml

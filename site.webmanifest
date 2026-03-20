@@ -1,0 +1,17 @@
+{
+  "name": "新媒体图文编辑器",
+  "short_name": "新媒体编辑器",
+  "description": "支持公众号编辑、小红书图文生成与封面设计的新媒体创作工作台。",
+  "start_url": "/newmedia/",
+  "display": "standalone",
+  "background_color": "#f4f1eb",
+  "theme_color": "#f25f3a",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
