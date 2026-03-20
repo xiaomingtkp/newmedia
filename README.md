@@ -161,11 +161,9 @@ http://localhost:8080
 - 仍建议不要在编辑器中粘贴不可信来源的复杂网页内容
 - 如果用于长期公开运营，建议进一步将第三方 CDN 依赖改为固定版本并补充 SRI
 
-## 参考
+## 说明
 
-README 的组织方式参考了花生编辑器项目的开源展示思路：
-
-- [alchaincyf/huasheng_editor](https://github.com/alchaincyf/huasheng_editor)
+项目在整理与演进过程中，参考了网上部分开源编辑器的代码组织方式与页面样式思路，并结合当前的新媒体创作场景做了适配与扩展。
 
 ## License
 
