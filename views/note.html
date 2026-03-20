@@ -3539,11 +3539,38 @@
         ];
         const out = [];
         style.split(";").forEach((rule) => {
-          const [k, v] = rule.split(":").map((s) => (s || "").trim());
+          const colonIndex = rule.indexOf(":");
+          if (colonIndex === -1) return;
+          const k = rule.slice(0, colonIndex).trim();
+          const v = rule.slice(colonIndex + 1).trim();
           if (!k || !v) return;
+          const lowerValue = v.toLowerCase();
+          if (
+            lowerValue.includes("expression(") ||
+            lowerValue.includes("url(") ||
+            lowerValue.includes("@import") ||
+            lowerValue.includes("javascript:")
+          ) {
+            return;
+          }
           if (keep.includes(k.toLowerCase())) out.push(`${k}:${v}`);
         });
         return out.join("; ");
+      }
+
+      function isSafeUrl(url, type = "link") {
+        const value = String(url || "").trim().replace(/[\u0000-\u001F\u007F\s]+/g, "");
+        if (!value) return false;
+        const lower = value.toLowerCase();
+        if (lower.startsWith("#") || lower.startsWith("/") || lower.startsWith("./") || lower.startsWith("../")) {
+          return true;
+        }
+        if (type === "image" && (lower.startsWith("data:image/") || lower.startsWith("blob:") || lower.startsWith("img:"))) {
+          return true;
+        }
+        if (lower.startsWith("https://") || lower.startsWith("http://")) return true;
+        if (type === "link" && (lower.startsWith("mailto:") || lower.startsWith("tel:"))) return true;
+        return false;
       }
 
       function hasStyledDescendant(node) {
@@ -3614,6 +3641,20 @@
 
           Array.from(el.attributes).forEach((attr) => {
             const name = attr.name.toLowerCase();
+            if (name.startsWith("on")) {
+              el.removeAttribute(attr.name);
+              return;
+            }
+            if (tag === "a" && name === "href") {
+              if (!isSafeUrl(attr.value, "link")) el.removeAttribute(attr.name);
+              return;
+            }
+            if (tag === "img" && name === "src") {
+              if (!isSafeUrl(attr.value, "image")) {
+                el.remove();
+              }
+              return;
+            }
             if (
               ["style", "href", "src", "alt", "title"].includes(name) ||
               (tag === "img" && name === "width") ||
@@ -3689,12 +3730,13 @@
         if (style) attrs.push(`style="${style}"`);
         if (tag === "a") {
           const href = node.getAttribute("href");
-          if (href) attrs.push(`href="${escapeHtml(href)}"`);
+          if (href && isSafeUrl(href, "link")) attrs.push(`href="${escapeHtml(href)}"`);
         }
         if (tag === "img") {
           const src = node.getAttribute("src") || "";
           const alt = node.getAttribute("alt") || "图片";
           const title = node.getAttribute("title") || "";
+          if (!isSafeUrl(src, "image")) return "";
           attrs.push(`src="${escapeHtml(src)}"`);
           attrs.push(`alt="${escapeHtml(alt)}"`);
           if (title) attrs.push(`title="${escapeHtml(title)}"`);
@@ -3710,7 +3752,11 @@
       function safeMarkedParse(text) {
         try {
           if (window.marked && typeof marked.parse === "function") {
-            return marked.parse(text);
+            const html = marked.parse(text);
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, "text/html");
+            sanitizeHtmlTree(doc.body);
+            return doc.body.innerHTML;
           }
         } catch (e) {
           // fall through to basic rendering

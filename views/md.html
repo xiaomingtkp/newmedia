@@ -2194,6 +2194,7 @@
       htmlContent = marked.parse(sample);
     }
     editor.value = htmlContent;
+    htmlContent = sanitizePastedHtml(htmlContent);
     editorRich.innerHTML = htmlContent;
     if (savedMode) {
       setTimeout(() => setEditorMode(savedMode), 0);
@@ -2536,7 +2537,9 @@
       editorRich.style.display = mode === "rich" ? "block" : "none";
       if (mode === "html") editor.value = htmlContent;
       if (mode === "rich" && !editorRich.innerHTML.trim() && htmlContent) {
-        editorRich.innerHTML = htmlContent;
+        const sanitized = sanitizePastedHtml(htmlContent);
+        htmlContent = sanitized;
+        editorRich.innerHTML = sanitized;
       }
       if (editorModeHint) {
         editorModeHint.textContent = mode === "rich" ? "富文本编辑，可切换 HTML 源码" : "当前：HTML 源码编辑";
@@ -3213,6 +3216,216 @@
       return { ...base, ...(presets[theme.id] || {}) };
     }
 
+    const SAFE_HTML_TAGS = new Set([
+      "p",
+      "div",
+      "span",
+      "strong",
+      "b",
+      "em",
+      "i",
+      "u",
+      "s",
+      "del",
+      "ins",
+      "mark",
+      "code",
+      "pre",
+      "a",
+      "img",
+      "ul",
+      "ol",
+      "li",
+      "br",
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+      "blockquote",
+      "table",
+      "thead",
+      "tbody",
+      "tfoot",
+      "tr",
+      "th",
+      "td",
+      "hr",
+      "sup",
+      "sub",
+      "figure",
+      "figcaption",
+      "section",
+      "article",
+      "header",
+      "footer",
+      "input",
+    ]);
+    const DROP_HTML_TAGS = new Set([
+      "script",
+      "style",
+      "iframe",
+      "object",
+      "embed",
+      "link",
+      "meta",
+      "base",
+      "form",
+      "textarea",
+      "button",
+      "select",
+      "option",
+      "video",
+      "audio",
+      "canvas",
+      "svg",
+      "math",
+    ]);
+    const SAFE_STYLE_PROPS = new Set([
+      "color",
+      "background-color",
+      "background",
+      "font-weight",
+      "font-style",
+      "text-decoration",
+      "font-size",
+      "font-family",
+      "text-align",
+      "line-height",
+      "border",
+      "border-left",
+      "border-right",
+      "border-top",
+      "border-bottom",
+      "border-color",
+      "border-radius",
+      "padding",
+      "padding-left",
+      "padding-right",
+      "padding-top",
+      "padding-bottom",
+      "margin",
+      "margin-left",
+      "margin-right",
+      "margin-top",
+      "margin-bottom",
+      "width",
+      "height",
+      "max-width",
+      "display",
+    ]);
+
+    function isSafeUrl(url, type = "link") {
+      const value = String(url || "").trim().replace(/[\u0000-\u001F\u007F\s]+/g, "");
+      if (!value) return false;
+      const lower = value.toLowerCase();
+      if (lower.startsWith("#") || lower.startsWith("/") || lower.startsWith("./") || lower.startsWith("../")) {
+        return true;
+      }
+      if (type === "image" && (lower.startsWith("data:image/") || lower.startsWith("blob:") || lower.startsWith("img:"))) {
+        return true;
+      }
+      if (lower.startsWith("https://") || lower.startsWith("http://")) return true;
+      if (type === "link" && (lower.startsWith("mailto:") || lower.startsWith("tel:"))) return true;
+      return false;
+    }
+
+    function sanitizeStyleText(style) {
+      const out = [];
+      String(style || "")
+        .split(";")
+        .map((rule) => rule.trim())
+        .filter(Boolean)
+        .forEach((rule) => {
+          const colonIndex = rule.indexOf(":");
+          if (colonIndex === -1) return;
+          const prop = rule.slice(0, colonIndex).trim().toLowerCase();
+          const value = rule.slice(colonIndex + 1).trim();
+          if (!SAFE_STYLE_PROPS.has(prop) || !value) return;
+          const lowerValue = value.toLowerCase();
+          if (
+            lowerValue.includes("expression(") ||
+            lowerValue.includes("url(") ||
+            lowerValue.includes("@import") ||
+            lowerValue.includes("javascript:")
+          ) {
+            return;
+          }
+          out.push(`${prop}: ${value}`);
+        });
+      return out.join("; ");
+    }
+
+    function sanitizeHtmlContainer(root) {
+      if (!root) return;
+      const nodes = Array.from(root.querySelectorAll("*"));
+      nodes.forEach((el) => {
+        const tag = el.tagName.toLowerCase();
+
+        if (DROP_HTML_TAGS.has(tag)) {
+          el.remove();
+          return;
+        }
+
+        if (!SAFE_HTML_TAGS.has(tag)) {
+          el.replaceWith(...Array.from(el.childNodes));
+          return;
+        }
+
+        if (tag === "input") {
+          const type = (el.getAttribute("type") || "").toLowerCase();
+          if (type !== "checkbox") {
+            el.remove();
+            return;
+          }
+          el.setAttribute("type", "checkbox");
+          if (el.hasAttribute("checked")) el.setAttribute("checked", "");
+          else el.removeAttribute("checked");
+          el.setAttribute("disabled", "");
+        }
+
+        const safeStyle = sanitizeStyleText(el.getAttribute("style") || "");
+        if (safeStyle) el.setAttribute("style", safeStyle);
+        else el.removeAttribute("style");
+
+        Array.from(el.attributes).forEach((attr) => {
+          const name = attr.name.toLowerCase();
+          const value = attr.value;
+
+          if (name.startsWith("on")) {
+            el.removeAttribute(attr.name);
+            return;
+          }
+
+          if (name === "style") return;
+
+          if (tag === "a" && name === "href") {
+            if (!isSafeUrl(value, "link")) el.removeAttribute("href");
+            return;
+          }
+
+          if (tag === "img" && name === "src") {
+            if (!isSafeUrl(value, "image")) {
+              el.remove();
+            }
+            return;
+          }
+
+          if (
+            ["alt", "title"].includes(name) ||
+            (tag === "img" && ["width", "height"].includes(name)) ||
+            ((tag === "td" || tag === "th") && ["colspan", "rowspan"].includes(name)) ||
+            (tag === "input" && ["type", "checked", "disabled"].includes(name))
+          ) {
+            return;
+          }
+
+          el.removeAttribute(attr.name);
+        });
+      });
+    }
+
     function inlineStylesFromStyleTags(root, options = {}) {
       const { applyTagSelectors = false } = options;
       const styleTags = Array.from(root.querySelectorAll("style"));
@@ -3277,13 +3490,14 @@
       const container = document.createElement("div");
       container.innerHTML = doc.body ? doc.body.innerHTML : html;
       inlineStylesFromStyleTags(container, { applyTagSelectors: false });
-      container.querySelectorAll("style").forEach((tag) => tag.remove());
+      sanitizeHtmlContainer(container);
       return container.innerHTML;
     }
 
     function prepareWechatCompatibleHtml(html) {
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, "text/html");
+      sanitizeHtmlContainer(doc.body);
       convertGridToTable(doc);
       return {
         html: doc.body.innerHTML,
@@ -3473,7 +3687,7 @@
       const article = articleHistory.find((item) => item.id === articleId);
       if (!article) return;
       currentArticleId = article.id;
-      htmlContent = article.content || "";
+      htmlContent = sanitizePastedHtml(article.content || "");
       editor.value = htmlContent;
       editorRich.innerHTML = htmlContent;
       const theme = themes.find((item) => item.id === article.themeId);
