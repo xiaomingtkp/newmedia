@@ -28,7 +28,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/turndown@7.2.0/dist/turndown.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/turndown-plugin-gfm@1.0.2/dist/turndown-plugin-gfm.js"></script>
@@ -3816,30 +3816,28 @@
         });
       }
 
+      const NOTE_STYLE_META = {
+        minimal: { category: "推荐", description: "稳妥通用，适合大多数图文内容。" },
+        tech: { category: "技术", description: "高对比层次，适合教程与科技内容。" },
+        elegant: { category: "品牌", description: "柔和雅致，适合品牌表达与生活内容。" },
+        deepread: { category: "报刊", description: "阅读感更强，适合深度文章与解读。" },
+        magazine: { category: "文艺", description: "杂志气质更明显，适合叙事与审美内容。" },
+        nyt: { category: "报刊", description: "专栏感更强，适合评论与观点表达。" },
+        ft: { category: "报刊", description: "暖纸张气质，适合分析与商业解读。" },
+        jonyive: { category: "极简", description: "黑白克制，适合理性内容与产品叙事。" },
+        wired: { category: "技术", description: "数字媒体感更强，适合趋势与科技内容。" },
+        medium: { category: "文艺", description: "长文阅读友好，适合叙事型内容。" },
+        apple: { category: "极简", description: "干净明亮，适合教程与产品介绍。" },
+        claude: { category: "品牌", description: "温暖细腻，适合观点与思考型表达。" },
+        coder: { category: "技术", description: "终端质感更强，适合工程实践内容。" },
+      };
+
       function getStyleCategory(styleId) {
-        if (["tech", "wired", "coder"].includes(styleId)) return "技术";
-        if (["nyt", "ft", "magazine", "deepread", "medium"].includes(styleId)) return "长文";
-        if (["apple", "jonyive", "default", "minimal"].includes(styleId)) return "极简";
-        return "通用";
+        return NOTE_STYLE_META[styleId]?.category || "推荐";
       }
 
       function getStyleDescription(styleId) {
-        const map = {
-          minimal: "默认公众号感，稳妥通用。",
-          tech: "蓝黑高对比，更适合科技与教程。",
-          elegant: "柔和雅致，适合品牌与女性向内容。",
-          deepread: "报刊阅读感，适合深度文章。",
-          magazine: "杂志排版感更强，视觉层次更明显。",
-          nyt: "纽约时报式专栏风格，适合评论与观点。",
-          ft: "金融时报式暖纸张感，适合分析解读。",
-          jonyive: "黑白极简，产品叙述更高级。",
-          wired: "数字媒体感强，适合趋势与科技内容。",
-          medium: "长文阅读友好，段落节奏舒展。",
-          apple: "克制干净，适合教程与品牌介绍。",
-          claude: "温暖细腻，适合思考型表达。",
-          coder: "终端质感强，适合工程技术内容。",
-        };
-        return map[styleId] || "快速切换整体视觉风格。";
+        return NOTE_STYLE_META[styleId]?.description || "快速切换整体视觉风格。";
       }
 
       function buildNoteStyleSampleStyle(style) {
