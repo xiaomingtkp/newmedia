@@ -648,9 +648,6 @@
     }
 
     #searchInput,
-    #colorHexInput,
-    #fontSizeInput,
-    #lineHeightInput,
     .sidebar-tools input,
     .sidebar-tools select {
       border: 1px solid var(--line);
@@ -664,9 +661,6 @@
     }
 
     #searchInput:focus,
-    #colorHexInput:focus,
-    #fontSizeInput:focus,
-    #lineHeightInput:focus,
     .sidebar-tools input:focus,
     .sidebar-tools select:focus {
       border-color: rgba(242, 95, 58, 0.28);
@@ -885,29 +879,6 @@
 
     .modal-mask.show .modal {
       animation: modalInSoft 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
-    .align-group {
-      display: flex;
-      gap: 8px;
-    }
-
-    .align-btn {
-      flex: 1;
-      border: 1px solid var(--line);
-      padding: 8px 10px;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      background: rgba(255,255,255,0.9);
-      color: var(--muted);
-    }
-
-    .align-btn.active {
-      border-color: var(--accent);
-      color: var(--accent);
-      background: var(--accent-soft);
     }
 
     .search {
@@ -1161,7 +1132,6 @@
     <div class="top-actions">
       <button class="btn btn-ghost" id="btnHistory">历史</button>
       <button class="btn btn-ghost" id="btnSaveHistory">保存</button>
-      <button class="btn btn-ghost" id="btnStyleConfig">样式配置</button>
       <div class="dropdown">
         <button class="btn" id="btnExport">保存为 ▾</button>
         <div class="dropdown-menu" id="exportMenu">
@@ -1294,46 +1264,6 @@
     <div class="history-list" id="historyList"></div>
   </aside>
   <div class="history-overlay" id="historyOverlay"></div>
-
-  <div class="modal-mask" id="styleModal">
-    <div class="modal">
-      <div class="modal-header">
-        <div class="modal-title">🎨 样式配置</div>
-        <button class="modal-close" id="closeStyleModal">×</button>
-      </div>
-      <div class="modal-body">
-        <div class="style-section">
-          <div class="style-section-title">主题颜色（标题）</div>
-          <div class="color-grid" id="colorGrid"></div>
-          <div class="input-row">
-            <span>HEX</span>
-            <input id="colorHexInput" type="text" value="#3b82f6" />
-          </div>
-          <div class="note">此颜色会应用于一级/二级/三级标题、引用块强调。</div>
-        </div>
-        <div class="style-section">
-          <div class="style-section-title">版式参数</div>
-          <div class="input-row">
-            <span>字体大小</span>
-            <input id="fontSizeInput" type="number" min="12" max="22" value="16" />
-            <span>px</span>
-          </div>
-          <div class="input-row">
-            <span>行高</span>
-            <input id="lineHeightInput" type="number" min="1.4" max="2.2" step="0.1" value="1.8" />
-          </div>
-        </div>
-        <div class="style-section">
-          <div class="style-section-title">文本对齐</div>
-          <div class="align-group">
-            <button class="align-btn active" data-align="left">左对齐</button>
-            <button class="align-btn" data-align="center">居中</button>
-            <button class="align-btn" data-align="justify">两端对齐</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <script>
     const editor = document.getElementById("editor");
@@ -4527,80 +4457,6 @@
       const html = prepared.html;
       return `<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body>${html}</body></html>`;
     }
-
-    const modal = document.getElementById("styleModal");
-    const btnStyle = document.getElementById("btnStyleConfig");
-    const btnClose = document.getElementById("closeStyleModal");
-    const colorGrid = document.getElementById("colorGrid");
-    const fontSizeInput = document.getElementById("fontSizeInput");
-    const lineHeightInput = document.getElementById("lineHeightInput");
-    const colorHexInput = document.getElementById("colorHexInput");
-
-    const palette = [
-      "#3b82f6", "#ef4444", "#22c55e", "#7c3aed", "#f59e0b", "#111827",
-      "#14b8a6", "#8b5cf6", "#0ea5e9", "#d9487f", "#059669", "#ea580c",
-      "#16a34a", "#1d4ed8", "#7c2d12", "#9ca3af", "#0f766e", "#0f172a"
-    ];
-
-    function renderPalette() {
-      colorGrid.innerHTML = palette
-        .map((c) => `<div class="color-dot ${c === customStyle.accent ? "active" : ""}" data-color="${c}" style="background:${c}"></div>`)
-        .join("");
-      colorGrid.querySelectorAll(".color-dot").forEach((dot) => {
-        dot.addEventListener("click", () => {
-          customStyle.accent = dot.dataset.color;
-          colorHexInput.value = customStyle.accent;
-          applyTheme(currentTheme);
-          updatePreview();
-          renderPalette();
-        });
-      });
-    }
-
-    btnStyle.addEventListener("click", () => {
-      modal.style.display = "flex";
-      renderPalette();
-      fontSizeInput.value = customStyle.fontSize;
-      lineHeightInput.value = customStyle.lineHeight;
-      colorHexInput.value = customStyle.accent;
-    });
-
-    btnClose.addEventListener("click", () => {
-      modal.style.display = "none";
-    });
-
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) modal.style.display = "none";
-    });
-
-    fontSizeInput.addEventListener("input", () => {
-      customStyle.fontSize = parseInt(fontSizeInput.value || "16", 10);
-      updatePreview();
-    });
-
-    lineHeightInput.addEventListener("input", () => {
-      customStyle.lineHeight = parseFloat(lineHeightInput.value || "1.8");
-      updatePreview();
-    });
-
-    colorHexInput.addEventListener("input", () => {
-      const val = colorHexInput.value.trim();
-      if (/^#[0-9a-fA-F]{6}$/.test(val)) {
-        customStyle.accent = val;
-        applyTheme(currentTheme);
-        updatePreview();
-        renderPalette();
-      }
-    });
-
-    document.querySelectorAll(".align-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".align-btn").forEach((el) => el.classList.remove("active"));
-        btn.classList.add("active");
-        customStyle.align = btn.dataset.align;
-        updatePreview();
-      });
-    });
 
     editor.addEventListener("input", () => {
       if (editorMode === "html") {
