@@ -1953,7 +1953,8 @@
 
       let overlayHtml = '';
       if (state.showOverlay) {
-        overlayHtml = `<div class="absolute inset-0 bg-gradient-to-t from-black/${state.overlayOpacity} to-transparent pointer-events-none"></div>`;
+        const overlayAlpha = Math.max(0, Math.min(1, Number(state.overlayOpacity) || 0));
+        overlayHtml = `<div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(to top, rgba(0,0,0,${overlayAlpha}) 0%, rgba(0,0,0,0) 65%);"></div>`;
       }
 
       // 网格背景
