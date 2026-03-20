@@ -1,59 +1,97 @@
 # 新媒体图文编辑器
 
-一个面向内容创作者的纯静态编辑器站点，包含 3 个工作台：
+一个面向内容创作者的在线编辑器，聚合了 `公众号编辑器`、`图文生成器`、`封面生成器` 三个工作台，适合完成公众号排版、小红书图文生成、封面设计等新媒体创作流程。
 
-- `公众号编辑器`：富文本粘贴、Markdown 编辑、主题排版、一键复制到公众号
-- `图文生成器`：Markdown 转多页图文卡片，适合小红书等内容平台
-- `封面生成器`：快速制作封面图、标题图和视觉头图
+项目为纯静态站点，基于原生 HTML / CSS / JavaScript 构建，无需构建工具，已经部署为公开网站，可直接访问使用。
 
-整个项目基于原生 HTML / CSS / JavaScript 构建，无需打包工具，适合直接部署到 GitHub Pages，生成对外可访问的网站。
+## 在线访问
 
-## 本地使用
+- 正式域名：[https://editor.have-idea.com](https://editor.have-idea.com)
+- GitHub Pages 备用地址：[https://xiaomingtkp.github.io/newmedia/](https://xiaomingtkp.github.io/newmedia/)
 
-直接在浏览器中打开 [index.html](./index.html) 即可使用。
+## 功能概览
 
-```bash
-open index.html
-```
+### 1. 公众号编辑器
+
+- 支持 Markdown 编辑与富文本粘贴
+- 支持飞书内容粘贴后保留主要结构与样式
+- 支持实时 HTML 预览
+- 内置 `22` 套公众号排版主题
+- 支持一键复制到公众号、复制到 X、导出 HTML
+- 支持本地草稿保存与历史记录
+
+入口：
+- [公众号编辑器](https://editor.have-idea.com/views/md.html)
+
+### 2. 图文生成器
+
+- 支持 Markdown 输入
+- 支持自动分页与手动分页
+- 支持图片引用、批量导出与卡片化预览
+- 内置 `13` 套图文样式
+- 适合生成小红书风格图文内容
+
+入口：
+- [图文生成器](https://editor.have-idea.com/views/note.html)
+
+### 3. 封面生成器
+
+- 支持标题、副标题、日期、页数等元素配置
+- 支持上传封面图与裁剪
+- 支持快速套用视觉模板
+- 内置 `9` 套封面主题
+- 支持高清 JPG / PNG 导出
+
+入口：
+- [封面生成器](https://editor.have-idea.com/views/cover.html)
+
+## 项目特色
+
+- 纯静态部署：无服务端依赖，适合 GitHub Pages
+- 多工作台整合：一个站点覆盖排版、图文、封面三类场景
+- 本地优先：编辑状态保存在浏览器本地，开箱即用
+- 主题化输出：可以快速切换不同内容风格
+- 导出友好：兼顾公众号复制、图片导出与 HTML 导出
 
 ## 页面结构
 
 ```text
 newmedia/
-├── index.html                 # 首页 / 功能导航
+├── index.html                 # 首页 / 工作台入口
 ├── views/
 │   ├── md.html                # 公众号编辑器
 │   ├── note.html              # 图文生成器
 │   └── cover.html             # 封面生成器
-├── fonts/                     # 字体资源
-├── favicon.svg
+├── fonts/                     # 本地字体资源
+├── og-cover.svg               # 分享封面
+├── robots.txt
+├── sitemap.xml
+├── site.webmanifest
+├── CNAME                      # 自定义域名
 ├── .github/workflows/
 │   └── deploy-pages.yml       # GitHub Pages 自动部署
 └── README.md
 ```
 
-## 核心能力
+## 本地运行
 
-### 公众号编辑器
+这是一个纯静态项目，直接打开首页即可：
 
-- 支持 Markdown 编辑与实时 HTML 预览
-- 支持粘贴飞书富文本并尽量保留结构
-- 内置多套公众号排版主题
-- 支持一键复制到公众号、复制到 X、导出 HTML
-- 支持本地历史记录与草稿保存
+```bash
+open index.html
+```
 
-### 图文生成器
+如果你更习惯本地静态服务器，也可以使用任意简单服务，例如：
 
-- 支持 Markdown 输入与样式化卡片分页
-- 支持自动分页与手动分页
-- 支持主题切换、图片引用和批量导出
-- 适合生成小红书风格图文内容
+```bash
+python3 -m http.server 8080
+```
 
-### 封面生成器
+然后访问：
 
-- 支持多种封面主题与布局模板
-- 支持标题、副标题、日期、页数等元素配置
-- 支持导出高清 JPG / PNG
+```text
+http://localhost:8080
+```
 
 ## 技术栈
 
@@ -64,57 +102,44 @@ newmedia/
 - `html-to-image`
 - `JSZip`
 - `FileSaver.js`
+- `Lucide`
 
-## 部署到 GitHub Pages
+## 部署说明
 
-项目已经包含 GitHub Pages 工作流。你只需要把代码推到 GitHub，然后开启 Pages。
+项目已内置 GitHub Pages 自动部署工作流。
 
-### 1. 新建 GitHub 仓库
+### GitHub Pages
 
-建议仓库名直接使用英文，例如 `newmedia-editor`。
+推送到 GitHub 后，在仓库中开启：
 
-### 2. 初始化并推送代码
+`Settings -> Pages -> Build and deployment -> Source: GitHub Actions`
 
-在项目根目录执行：
+工作流文件：
 
-```bash
-git init
-git add .
-git commit -m "feat: initial site"
-git branch -M main
-git remote add origin https://github.com/<你的用户名>/<你的仓库名>.git
-git push -u origin main
-```
+- [.github/workflows/deploy-pages.yml](./.github/workflows/deploy-pages.yml)
 
-### 3. 在 GitHub 开启 Pages
+### 自定义域名
 
-进入仓库：
+当前项目已配置自定义域名：
 
-`Settings` -> `Pages` -> `Build and deployment`
+- `editor.have-idea.com`
 
-选择：
+仓库中对应文件：
 
-- `Source`: `GitHub Actions`
+- [CNAME](./CNAME)
 
-仓库收到 `main` 或 `master` 分支更新后，会自动执行 `.github/workflows/deploy-pages.yml` 并发布网站。
+如果你要迁移到自己的域名，需要修改两处：
 
-### 4. 访问外部网址
+1. 仓库根目录的 `CNAME`
+2. 域名服务商后台的 DNS 记录
 
-部署成功后，默认地址通常是：
+子域名常见配置示例：
 
 ```text
-https://<你的用户名>.github.io/<你的仓库名>/
+主机记录：editor
+记录类型：CNAME
+记录值：xiaomingtkp.github.io
 ```
-
-如果你使用的是用户主页仓库 `<你的用户名>.github.io`，则地址会是：
-
-```text
-https://<你的用户名>.github.io/
-```
-
-## 自定义域名
-
-如果后面你想绑定自己的域名，可以在仓库 `Settings -> Pages` 中配置 `Custom domain`，再按域名服务商要求添加 DNS 记录。
 
 ## 浏览器支持
 
@@ -122,13 +147,25 @@ https://<你的用户名>.github.io/
 - Safari
 - Firefox
 
-推荐使用最新版 Chrome 或 Edge，编辑与导出体验最稳定。
+推荐使用最新版 Chrome 或 Edge，编辑和导出体验更稳定。
 
-## 说明
+## 隐私与数据说明
 
-- 项目根目录已加入 `.nojekyll`，避免 GitHub Pages 对静态目录做额外处理
-- 当前站点是纯静态站，不依赖 Node.js 服务端
-- 所有编辑数据默认保存在浏览器本地 `localStorage`
+- 项目不依赖服务端存储
+- 编辑内容、样式配置、历史记录默认保存在浏览器本地 `localStorage`
+- 适合个人创作场景，但在共享电脑上使用后建议手动清理本地数据
+
+## 安全说明
+
+- 项目已对粘贴 HTML 和 Markdown 渲染链路增加基础白名单清洗
+- 仍建议不要在编辑器中粘贴不可信来源的复杂网页内容
+- 如果用于长期公开运营，建议进一步将第三方 CDN 依赖改为固定版本并补充 SRI
+
+## 参考
+
+README 的组织方式参考了花生编辑器项目的开源展示思路：
+
+- [alchaincyf/huasheng_editor](https://github.com/alchaincyf/huasheng_editor)
 
 ## License
 
