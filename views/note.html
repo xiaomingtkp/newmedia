@@ -3285,7 +3285,7 @@
 
           const textarea = document.getElementById("input-content");
           if (html) {
-            const markdown = htmlToMarkdown(html, { forceMarkdown: true });
+            const markdown = await htmlToMarkdown(html, { forceMarkdown: true });
             insertTextAtCursor(textarea, markdown);
           } else if (text) {
             insertTextAtCursor(textarea, text);
@@ -3319,7 +3319,7 @@
 
             if (html) {
               e.preventDefault();
-              const markdown = htmlToMarkdown(html, { forceMarkdown: true });
+              const markdown = await htmlToMarkdown(html, { forceMarkdown: true });
               const textarea = document.getElementById("input-content");
               insertTextAtCursor(textarea, markdown);
               updatePreview();
@@ -3342,7 +3342,7 @@
           target.value.substring(target.selectionEnd);
       }
 
-      function htmlToMarkdown(html, options = {}) {
+      async function htmlToMarkdown(html, options = {}) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, "text/html");
         const root = doc.body;
@@ -3351,7 +3351,7 @@
         sanitizeHtmlTree(root);
         normalizePastedStructure(root);
         simplifyRichTextMarkup(root);
-        convertPastedImages(root);
+        await convertPastedImages(root);
 
         if (!window.TurndownService) {
           const lines = [];
@@ -3571,15 +3571,37 @@
         });
       }
 
-      function convertPastedImages(root) {
-        root.querySelectorAll("img").forEach((img) => {
+      async function convertPastedImages(root) {
+        const images = Array.from(root.querySelectorAll("img"));
+        for (const img of images) {
           const src = img.getAttribute("src");
-          if (src && src.startsWith("data:image/")) {
-            const id = Date.now().toString() + Math.floor(Math.random() * 1000);
-            state.bodyImages[id] = src;
+          if (!(src && src.startsWith("data:image/"))) continue;
+          try {
+            const response = await fetch(src);
+            const blob = await response.blob();
+            const ext =
+              (blob.type && blob.type.includes("/") && blob.type.split("/")[1]) ||
+              "png";
+            const file = new File(
+              [blob],
+              `pasted-${Date.now()}.${ext}`,
+              { type: blob.type || "image/png" },
+            );
+            const compressed = await bodyImageCompressor.compress(file);
+            const id = createBodyImageId();
+            await bodyImageStore.saveImage(id, compressed, {
+              name: "截图",
+              originalName: file.name,
+              originalSize: blob.size,
+              compressedSize: compressed.size,
+              mimeType: compressed.type || file.type,
+            });
+            state.bodyImages[id] = URL.createObjectURL(compressed);
             img.setAttribute("src", `img://${id}`);
+          } catch (error) {
+            console.warn("粘贴图片入库失败，保留原始图片：", error);
           }
-        });
+        }
       }
 
       function mergeInlineStyles(existing, extra) {
