@@ -770,7 +770,7 @@
     }
 
     .modal {
-      width: 420px;
+      width: 560px;
       max-width: 92vw;
       background: rgba(255, 255, 255, 0.95);
       border-radius: 20px;
@@ -809,23 +809,26 @@
     }
 
     .modal-body {
-      padding: 14px 16px 18px;
+      padding: 16px 18px 20px;
       display: grid;
-      gap: 14px;
+      gap: 12px;
+      max-height: min(72vh, 640px);
+      overflow: auto;
     }
 
     .color-grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+      gap: 12px 10px;
     }
 
     .color-dot {
-      width: 26px;
-      height: 26px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       border: 2px solid transparent;
       cursor: pointer;
+      justify-self: center;
     }
 
     .color-dot.active { border-color: #111827; }
@@ -841,6 +844,22 @@
       gap: 8px;
       font-size: 12px;
       color: var(--muted);
+    }
+
+    .style-section {
+      border: 1px solid rgba(226, 232, 240, 0.92);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.9);
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .style-section-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #374151;
+      letter-spacing: 0.01em;
     }
 
     .input-row input {
@@ -876,11 +895,12 @@
     .align-btn {
       flex: 1;
       border: 1px solid var(--line);
-      padding: 6px 8px;
-      border-radius: 8px;
-      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
       cursor: pointer;
-      background: #fff;
+      background: rgba(255,255,255,0.9);
       color: var(--muted);
     }
 
@@ -1130,7 +1150,7 @@
 <body>
   <header>
     <div class="header-left">
-      <div class="title">公众号编辑器 <span class="status">已自动保存</span></div>
+      <div class="title">公众号编辑器</div>
       <select id="pageSwitch" class="page-switch" aria-label="切换页面">
         <option value="./cover.html">封面生成器</option>
         <option value="./note.html">图文生成器</option>
@@ -1282,8 +1302,8 @@
         <button class="modal-close" id="closeStyleModal">×</button>
       </div>
       <div class="modal-body">
-        <div>
-          <div class="input-row"><strong>主题颜色（标题）</strong></div>
+        <div class="style-section">
+          <div class="style-section-title">主题颜色（标题）</div>
           <div class="color-grid" id="colorGrid"></div>
           <div class="input-row">
             <span>HEX</span>
@@ -1291,17 +1311,20 @@
           </div>
           <div class="note">此颜色会应用于一级/二级/三级标题、引用块强调。</div>
         </div>
-        <div class="input-row">
-          <span>字体大小</span>
-          <input id="fontSizeInput" type="number" min="12" max="22" value="16" />
-          <span>px</span>
+        <div class="style-section">
+          <div class="style-section-title">版式参数</div>
+          <div class="input-row">
+            <span>字体大小</span>
+            <input id="fontSizeInput" type="number" min="12" max="22" value="16" />
+            <span>px</span>
+          </div>
+          <div class="input-row">
+            <span>行高</span>
+            <input id="lineHeightInput" type="number" min="1.4" max="2.2" step="0.1" value="1.8" />
+          </div>
         </div>
-        <div class="input-row">
-          <span>行高</span>
-          <input id="lineHeightInput" type="number" min="1.4" max="2.2" step="0.1" value="1.8" />
-        </div>
-        <div>
-          <div class="input-row"><span>文本对齐</span></div>
+        <div class="style-section">
+          <div class="style-section-title">文本对齐</div>
           <div class="align-group">
             <button class="align-btn active" data-align="left">左对齐</button>
             <button class="align-btn" data-align="center">居中</button>
