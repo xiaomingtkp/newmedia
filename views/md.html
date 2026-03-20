@@ -860,6 +860,10 @@
       background: rgba(255,255,255,0.96);
     }
 
+    .modal-mask.show {
+      display: flex;
+    }
+
     .modal-mask.show .modal {
       animation: modalInSoft 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
     }
@@ -1071,6 +1075,44 @@
       overflow: hidden;
     }
 
+    .image-lib-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.92);
+      display: grid;
+      gap: 0;
+    }
+
+    .image-lib-card img {
+      width: 100%;
+      height: 96px;
+      object-fit: cover;
+      background: #f3f4f6;
+      display: block;
+    }
+
+    .image-lib-meta {
+      padding: 8px;
+      display: grid;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .image-lib-name {
+      font-size: 11px;
+      color: #111827;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .image-lib-actions {
+      display: flex;
+      gap: 6px;
+    }
+
     @media (max-width: 1100px) {
       .layout {
         grid-template-columns: 1fr;
@@ -1165,6 +1207,7 @@
         <button class="btn" data-action="link">🔗</button>
         <button class="btn" data-action="img">🖼</button>
         <button class="btn" id="btnUploadImg">上传图片</button>
+        <button class="btn" id="btnImageLibrary">图片库</button>
         <button class="btn" data-action="hr">—</button>
       </div>
       <textarea id="editor" spellcheck="false"></textarea>
@@ -1200,6 +1243,23 @@
         <div class="theme-list" id="themeList"></div>
       </div>
     </aside>
+  </div>
+
+  <div class="modal-mask" id="imageLibraryModal">
+    <div class="modal" style="width:min(720px,92vw);max-height:76vh;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <h3>图片库</h3>
+        <button class="modal-close" id="closeImageLibrary">✕</button>
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span id="imageLibraryStats" style="font-size:12px;color:var(--muted);">0 张图片</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn" id="refreshImageLibrary">刷新</button>
+          <button class="btn" id="clearImageLibrary">清空图片库</button>
+        </div>
+      </div>
+      <div id="imageLibraryList" style="padding:14px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;"></div>
+    </div>
   </div>
 
   <div class="copy-toast" id="copyToast">已复制，可以去公众号粘贴使用。</div>
@@ -1261,6 +1321,7 @@
     const searchInput = document.getElementById("searchInput");
     const editorStats = document.getElementById("editorStats");
     const btnUploadImg = document.getElementById("btnUploadImg");
+    const btnImageLibrary = document.getElementById("btnImageLibrary");
     const layout = document.getElementById("layout");
     const splitterLeft = document.getElementById("splitterLeft");
     const splitterRight = document.getElementById("splitterRight");
@@ -1279,6 +1340,12 @@
     const historyList = document.getElementById("historyList");
     const historyCount = document.getElementById("historyCount");
     const btnCloseHistory = document.getElementById("btnCloseHistory");
+    const imageLibraryModal = document.getElementById("imageLibraryModal");
+    const closeImageLibrary = document.getElementById("closeImageLibrary");
+    const refreshImageLibrary = document.getElementById("refreshImageLibrary");
+    const clearImageLibrary = document.getElementById("clearImageLibrary");
+    const imageLibraryList = document.getElementById("imageLibraryList");
+    const imageLibraryStats = document.getElementById("imageLibraryStats");
 
     if (pageSwitch) {
       pageSwitch.value = "./md.html";
@@ -1287,6 +1354,170 @@
         if (target) window.location.href = target;
       });
     }
+
+    class ImageStore {
+      constructor() {
+        this.dbName = "NewMediaEditorImages";
+        this.storeName = "images";
+        this.version = 1;
+        this.db = null;
+      }
+
+      async init() {
+        if (this.db) return this.db;
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(this.dbName, this.version);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => {
+            this.db = request.result;
+            resolve(this.db);
+          };
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(this.storeName)) {
+              const store = db.createObjectStore(this.storeName, { keyPath: "id" });
+              store.createIndex("createdAt", "createdAt", { unique: false });
+              store.createIndex("name", "name", { unique: false });
+            }
+          };
+        });
+      }
+
+      async saveImage(id, blob, metadata = {}) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([this.storeName], "readwrite");
+          const store = tx.objectStore(this.storeName);
+          const payload = {
+            id,
+            blob,
+            name: metadata.name || "image",
+            originalSize: metadata.originalSize || 0,
+            compressedSize: blob.size,
+            createdAt: Date.now(),
+            ...metadata,
+          };
+          const req = store.put(payload);
+          req.onsuccess = () => resolve(id);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async getImageRecord(id) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([this.storeName], "readonly");
+          const store = tx.objectStore(this.storeName);
+          const req = store.get(id);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async getAllImages() {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([this.storeName], "readonly");
+          const store = tx.objectStore(this.storeName);
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async deleteImage(id) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([this.storeName], "readwrite");
+          const store = tx.objectStore(this.storeName);
+          const req = store.delete(id);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async clearAll() {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([this.storeName], "readwrite");
+          const store = tx.objectStore(this.storeName);
+          const req = store.clear();
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+    }
+
+    class ImageCompressor {
+      constructor(options = {}) {
+        this.maxWidth = options.maxWidth || 1920;
+        this.maxHeight = options.maxHeight || 1920;
+        this.quality = options.quality || 0.85;
+        this.mimeType = options.mimeType || "image/jpeg";
+      }
+
+      async compress(file) {
+        if (!file?.type?.startsWith("image/")) {
+          throw new Error("仅支持图片文件");
+        }
+        if (file.type === "image/gif" || file.type === "image/svg+xml") {
+          return file;
+        }
+
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error("文件读取失败"));
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onerror = () => reject(new Error("图片加载失败"));
+            img.onload = () => {
+              const canvas = document.createElement("canvas");
+              let width = img.width;
+              let height = img.height;
+              let scale = 1;
+              if (width > this.maxWidth) scale = this.maxWidth / width;
+              if (height > this.maxHeight) scale = Math.min(scale, this.maxHeight / height);
+              width = Math.max(1, Math.floor(width * scale));
+              height = Math.max(1, Math.floor(height * scale));
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext("2d");
+              ctx.fillStyle = "#ffffff";
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+              canvas.toBlob(
+                (blob) => {
+                  if (!blob) {
+                    reject(new Error("图片压缩失败"));
+                    return;
+                  }
+                  resolve(blob.size < file.size ? blob : file);
+                },
+                file.type === "image/png" ? "image/png" : this.mimeType,
+                this.quality,
+              );
+            };
+            img.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      static formatSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      }
+    }
+
+    const imageStore = new ImageStore();
+    const imageCompressor = new ImageCompressor({ maxWidth: 1920, maxHeight: 1920, quality: 0.85 });
+    const imageObjectUrlMap = {};
+    let previewRenderToken = 0;
+
+    imageStore.init().catch(() => {
+      showCopyToast("图片存储初始化失败，已回退为普通模式。");
+    });
 
     let editorMode = "rich";
     let previewMode = "wechat";
@@ -2419,13 +2650,16 @@
       preview.style.fontFamily = preset.bodyFont;
     }
 
-    function updatePreview() {
+    async function updatePreview() {
+      const renderToken = ++previewRenderToken;
       const wasFocused =
         document.activeElement === editor ||
         document.activeElement === editorRich;
       const prevRatio = preview.scrollTop / (preview.scrollHeight - preview.clientHeight || 1);
 
       preview.innerHTML = buildWeChatHtml();
+      await resolveImgProtocolInRoot(preview);
+      if (renderToken !== previewRenderToken) return;
       wrapPreviewTables(preview);
       if (preview.dataset.rawTheme === "true") {
         preview.style.fontSize = "";
@@ -2570,6 +2804,12 @@
     });
 
     editor.addEventListener("paste", (e) => {
+      const imageFile = extractClipboardImage(e);
+      if (imageFile) {
+        e.preventDefault();
+        handleImageUpload(imageFile, "html");
+        return;
+      }
       const html = e.clipboardData?.getData("text/html");
       if (html) {
         e.preventDefault();
@@ -2593,6 +2833,12 @@
     });
 
     editorRich.addEventListener("paste", (e) => {
+      const imageFile = extractClipboardImage(e);
+      if (imageFile) {
+        e.preventDefault();
+        handleImageUpload(imageFile, "rich");
+        return;
+      }
       const html = e.clipboardData?.getData("text/html");
       if (html) {
         e.preventDefault();
@@ -2665,6 +2911,283 @@
       editor.value = editor.value.slice(0, start) + text + editor.value.slice(end);
       editor.focus();
       updatePreview();
+    }
+
+    function escapeAttribute(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function createImageId() {
+      return `img-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    function getEditorInsertMode() {
+      return editorMode === "html" ? "html" : "rich";
+    }
+
+    function extractClipboardImage(event) {
+      const data = event.clipboardData;
+      if (!data) return null;
+      if (data.files && data.files.length > 0) {
+        const file = data.files[0];
+        if (file?.type?.startsWith("image/")) return file;
+      }
+      const items = data.items || [];
+      for (const item of items) {
+        if (item.kind === "file" && item.type?.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) return file;
+        }
+      }
+      return null;
+    }
+
+    async function handleImageUpload(file, insertMode = getEditorInsertMode()) {
+      if (!file?.type?.startsWith("image/")) {
+        showCopyToast("请上传图片文件。");
+        return;
+      }
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        showCopyToast("图片大小不能超过 10MB。");
+        return;
+      }
+
+      const imageName = (file.name || "图片").replace(/\.[^/.]+$/, "") || "图片";
+      const originalSize = file.size;
+      updateStatusBadge("正在处理图片");
+
+      try {
+        const compressedBlob = await imageCompressor.compress(file);
+        const compressedSize = compressedBlob.size;
+        const ratio = Math.max(0, (1 - compressedSize / Math.max(1, originalSize)) * 100).toFixed(0);
+        const imageId = createImageId();
+
+        await imageStore.saveImage(imageId, compressedBlob, {
+          name: imageName,
+          originalName: file.name || imageName,
+          originalSize,
+          compressedSize,
+          compressionRatio: ratio,
+          mimeType: compressedBlob.type || file.type,
+        });
+
+        const imageMarkup = `<img src="img://${imageId}" alt="${escapeAttribute(imageName)}" />`;
+        if (insertMode === "html") {
+          insertAtCursor(imageMarkup);
+        } else {
+          insertHtmlAtCursor(imageMarkup);
+          htmlContent = editorRich.innerHTML || htmlContent;
+        }
+
+        updateStatusBadge("图片已插入");
+        if (Number(ratio) > 10) {
+          showCopyToast(`图片已压缩并保存：${ImageCompressor.formatSize(originalSize)} → ${ImageCompressor.formatSize(compressedSize)}`);
+        } else {
+          showCopyToast(`图片已保存：${ImageCompressor.formatSize(compressedSize)}`);
+        }
+      } catch (error) {
+        console.error("图片处理失败:", error);
+        updateStatusBadge("图片处理失败");
+        showCopyToast(`图片处理失败：${error.message || "未知错误"}`);
+      }
+    }
+
+    async function getImageObjectUrl(imageId) {
+      if (imageObjectUrlMap[imageId]) return imageObjectUrlMap[imageId];
+      const record = await imageStore.getImageRecord(imageId);
+      if (!record?.blob) return null;
+      const objectUrl = URL.createObjectURL(record.blob);
+      imageObjectUrlMap[imageId] = objectUrl;
+      return objectUrl;
+    }
+
+    async function resolveImgProtocolInRoot(root) {
+      const images = Array.from(root.querySelectorAll('img[src^="img://"]'));
+      if (!images.length) return;
+      for (const img of images) {
+        const src = img.getAttribute("src") || "";
+        const imageId = src.slice("img://".length);
+        if (!imageId) continue;
+        try {
+          const objectUrl = await getImageObjectUrl(imageId);
+          if (!objectUrl) {
+            img.setAttribute(
+              "src",
+              'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="220" height="160"%3E%3Crect fill="%23e5e7eb" width="220" height="160"/%3E%3Ctext fill="%236b7280" x="50%25" y="50%25" text-anchor="middle" dy=".35em"%3E图片不存在%3C/text%3E%3C/svg%3E',
+            );
+            continue;
+          }
+          img.setAttribute("src", objectUrl);
+          img.setAttribute("data-image-id", imageId);
+        } catch (error) {
+          console.error("加载图片失败:", imageId, error);
+          img.setAttribute(
+            "src",
+            'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="220" height="160"%3E%3Crect fill="%23fee2e2" width="220" height="160"/%3E%3Ctext fill="%23b91c1c" x="50%25" y="50%25" text-anchor="middle" dy=".35em"%3E加载失败%3C/text%3E%3C/svg%3E',
+          );
+        }
+      }
+    }
+
+    async function recompressForClipboard(blob) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(blob);
+        img.onload = () => {
+          try {
+            const maxDim = 1200;
+            let width = img.naturalWidth;
+            let height = img.naturalHeight;
+            const ratio = Math.min(maxDim / width, maxDim / height, 1);
+            width = Math.max(1, Math.round(width * ratio));
+            height = Math.max(1, Math.round(height * ratio));
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (compressed) => {
+                URL.revokeObjectURL(objectUrl);
+                if (compressed && compressed.size < blob.size) resolve(compressed);
+                else resolve(blob);
+              },
+              "image/jpeg",
+              0.6,
+            );
+          } catch (error) {
+            URL.revokeObjectURL(objectUrl);
+            reject(error);
+          }
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error("图片加载失败"));
+        };
+        img.src = objectUrl;
+      });
+    }
+
+    async function blobToDataUrl(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("读取图片失败"));
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function convertImageNodeToDataUrl(img) {
+      const src = img.getAttribute("src") || "";
+      if (src.startsWith("data:")) return src;
+
+      const attrId = img.getAttribute("data-image-id");
+      const srcId = src.startsWith("img://") ? src.slice("img://".length) : "";
+      const imageId = attrId || srcId;
+
+      if (imageId) {
+        const record = await imageStore.getImageRecord(imageId);
+        if (record?.blob) {
+          const isGif = (record.mimeType || record.blob.type || "").toLowerCase() === "image/gif";
+          const blob = !isGif && record.blob.size > 1024 * 1024
+            ? await recompressForClipboard(record.blob)
+            : record.blob;
+          return blobToDataUrl(blob);
+        }
+      }
+
+      const response = await fetch(src);
+      if (!response.ok) throw new Error(`图片加载失败：${response.status}`);
+      const blob = await response.blob();
+      return blobToDataUrl(blob);
+    }
+
+    async function inlineImagesForCopy(root) {
+      const images = Array.from(root.querySelectorAll("img"));
+      if (!images.length) return { total: 0, success: 0, fail: 0 };
+      let success = 0;
+      let fail = 0;
+      for (const img of images) {
+        try {
+          const dataUrl = await convertImageNodeToDataUrl(img);
+          img.setAttribute("src", dataUrl);
+          img.removeAttribute("data-image-id");
+          success += 1;
+        } catch (error) {
+          console.error("图片内联失败:", img.getAttribute("src"), error);
+          fail += 1;
+        }
+      }
+      return { total: images.length, success, fail };
+    }
+
+    function getImageInsertReference(record) {
+      return `<img src="img://${record.id}" alt="${escapeAttribute(record.name || "图片")}" />`;
+    }
+
+    async function renderImageLibrary() {
+      if (!imageLibraryList || !imageLibraryStats) return;
+      try {
+        const images = await imageStore.getAllImages();
+        images.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const totalSize = images.reduce((sum, item) => sum + (item.compressedSize || item.blob?.size || 0), 0);
+        imageLibraryStats.textContent = `${images.length} 张图片 · ${ImageCompressor.formatSize(totalSize)}`;
+        if (!images.length) {
+          imageLibraryList.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:12px;padding:16px;text-align:center;">暂无图片，上传或粘贴后会自动入库。</div>`;
+          return;
+        }
+
+        const cards = [];
+        for (const record of images) {
+          const objectUrl = await getImageObjectUrl(record.id);
+          cards.push(`
+            <div class="image-lib-card" data-image-id="${record.id}">
+              <img src="${objectUrl || ""}" alt="${escapeAttribute(record.name || "图片")}" />
+              <div class="image-lib-meta">
+                <div class="image-lib-name">${escapeHtml(record.name || "图片")}</div>
+                <div>${ImageCompressor.formatSize(record.compressedSize || record.blob?.size || 0)}</div>
+                <div class="image-lib-actions">
+                  <button class="btn" data-copy-image="${record.id}" style="padding:4px 8px;font-size:11px;">复制引用</button>
+                  <button class="btn" data-delete-image="${record.id}" style="padding:4px 8px;font-size:11px;">删除</button>
+                </div>
+              </div>
+            </div>
+          `);
+        }
+        imageLibraryList.innerHTML = cards.join("");
+        imageLibraryList.querySelectorAll("[data-copy-image]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const record = images.find((img) => img.id === btn.dataset.copyImage);
+            if (!record) return;
+            const reference = getImageInsertReference(record);
+            if (editorMode === "html") insertAtCursor(reference);
+            else insertHtmlAtCursor(reference);
+            showCopyToast("已插入图片引用。");
+          });
+        });
+        imageLibraryList.querySelectorAll("[data-delete-image]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const imageId = btn.dataset.deleteImage;
+            await imageStore.deleteImage(imageId);
+            if (imageObjectUrlMap[imageId]) {
+              URL.revokeObjectURL(imageObjectUrlMap[imageId]);
+              delete imageObjectUrlMap[imageId];
+            }
+            renderImageLibrary();
+            showCopyToast("已删除图片。");
+          });
+        });
+      } catch (error) {
+        console.error("读取图片库失败:", error);
+        imageLibraryList.innerHTML = `<div style="grid-column:1/-1;color:#b91c1c;font-size:12px;padding:16px;text-align:center;">图片库读取失败</div>`;
+      }
     }
 
     function buildWeChatHtml() {
@@ -3338,7 +3861,7 @@
       if (lower.startsWith("#") || lower.startsWith("/") || lower.startsWith("./") || lower.startsWith("../")) {
         return true;
       }
-      if (type === "image" && (lower.startsWith("data:image/") || lower.startsWith("blob:") || lower.startsWith("img:"))) {
+      if (type === "image" && (lower.startsWith("data:image/") || lower.startsWith("blob:") || lower.startsWith("img://") || lower.startsWith("img:"))) {
         return true;
       }
       if (lower.startsWith("https://") || lower.startsWith("http://")) return true;
@@ -3513,19 +4036,22 @@
     editor.value = htmlContent;
     editorRich.innerHTML = htmlContent;
 
-    function prepareWechatCompatibleHtml(html) {
+    async function prepareWechatCompatibleHtml(html, options = {}) {
+      const { inlineImages = false } = options;
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, "text/html");
       sanitizeHtmlContainer(doc.body);
       convertGridToTable(doc);
+      const imageResult = inlineImages ? await inlineImagesForCopy(doc.body) : null;
       return {
         html: doc.body.innerHTML,
         text: doc.body.textContent || "",
+        images: imageResult,
       };
     }
 
     async function copyHtmlToClipboard(html) {
-      const prepared = prepareWechatCompatibleHtml(html);
+      const prepared = await prepareWechatCompatibleHtml(html, { inlineImages: true });
       const finalHtml = prepared.html;
       const plainText = prepared.text;
 
@@ -3538,6 +4064,9 @@
             "text/plain": blobText,
           }),
         ]);
+        if (prepared.images?.fail) {
+          showCopyToast(`已复制，${prepared.images.success}/${prepared.images.total} 张图片已内联。`);
+        }
         return;
       }
       const temp = document.createElement("div");
@@ -3864,17 +4393,53 @@
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "image/*";
-      input.onchange = () => {
+      input.onchange = async () => {
         const file = input.files?.[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const url = e.target.result;
-          insertAtCursor(`![图片](${url})`);
-        };
-        reader.readAsDataURL(file);
+        await handleImageUpload(file, getEditorInsertMode());
       };
       input.click();
+    });
+
+    [editor, editorRich].forEach((target) => {
+      target.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+      });
+      target.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer?.files?.[0];
+        if (!file) return;
+        await handleImageUpload(file, target === editor ? "html" : "rich");
+      });
+    });
+
+    btnImageLibrary?.addEventListener("click", async () => {
+      imageLibraryModal?.classList.add("show");
+      await renderImageLibrary();
+    });
+
+    closeImageLibrary?.addEventListener("click", () => {
+      imageLibraryModal?.classList.remove("show");
+    });
+
+    imageLibraryModal?.addEventListener("click", (e) => {
+      if (e.target === imageLibraryModal) imageLibraryModal.classList.remove("show");
+    });
+
+    refreshImageLibrary?.addEventListener("click", () => {
+      renderImageLibrary();
+    });
+
+    clearImageLibrary?.addEventListener("click", async () => {
+      if (!confirm("确认清空图片库吗？此操作不可恢复。")) return;
+      await imageStore.clearAll();
+      Object.keys(imageObjectUrlMap).forEach((id) => {
+        URL.revokeObjectURL(imageObjectUrlMap[id]);
+        delete imageObjectUrlMap[id];
+      });
+      await renderImageLibrary();
+      showCopyToast("图片库已清空。");
     });
 
     editor.addEventListener("keydown", (e) => {
@@ -3915,10 +4480,13 @@
       });
     });
 
-    function handleExport(type) {
+    async function handleExport(type) {
       if (type === "md") return downloadText(editor.value, "markdown.md");
-      if (type === "html") return downloadText(prepareWechatCompatibleHtml(buildWeChatHtml()).html, "wechat.html");
-      if (type === "word") return downloadText(buildWordHtml(), "wechat.doc");
+      if (type === "html") {
+        const prepared = await prepareWechatCompatibleHtml(buildWeChatHtml(), { inlineImages: true });
+        return downloadText(prepared.html, "wechat.html");
+      }
+      if (type === "word") return downloadText(await buildWordHtml(), "wechat.doc");
       if (type === "pdf") return window.print();
     }
 
@@ -3931,8 +4499,9 @@
       URL.revokeObjectURL(link.href);
     }
 
-    function buildWordHtml() {
-      const html = buildWeChatHtml();
+    async function buildWordHtml() {
+      const prepared = await prepareWechatCompatibleHtml(buildWeChatHtml(), { inlineImages: true });
+      const html = prepared.html;
       return `<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body>${html}</body></html>`;
     }
 
@@ -4035,6 +4604,13 @@
     });
     preview.addEventListener("scroll", () => syncScroll(false));
     searchInput.addEventListener("input", renderThemes);
+
+    window.addEventListener("beforeunload", () => {
+      Object.keys(imageObjectUrlMap).forEach((id) => {
+        URL.revokeObjectURL(imageObjectUrlMap[id]);
+        delete imageObjectUrlMap[id];
+      });
+    });
 
     loadArticleHistoryStore();
     renderHistoryList();
