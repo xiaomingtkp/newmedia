@@ -636,17 +636,25 @@
       transition: all 0.2s;
       position: relative;
       overflow: hidden;
+      border-color: rgba(23, 25, 28, 0.1);
+      background: rgba(255,255,255,0.86);
+      color: var(--ink);
     }
     .theme-btn.active {
-      border-color: #000;
-      background: #000;
-      color: white;
+      border-color: rgba(242, 95, 58, 0.45);
+      background: linear-gradient(180deg, rgba(255, 245, 242, 0.98), rgba(255, 236, 229, 0.9));
+      color: #1f2937;
+      box-shadow: 0 10px 22px rgba(242, 95, 58, 0.16), inset 0 1px 0 rgba(255,255,255,0.92);
     }
     .theme-btn.active::before {
       content: "";
       position: absolute;
       top: 0; left: 0; width: 3px; height: 100%;
       background: linear-gradient(180deg, #FF2442, #FF4D6D);
+    }
+    .theme-btn:hover {
+      border-color: rgba(242, 95, 58, 0.24);
+      background: rgba(255,255,255,0.98);
     }
 
     /* 颜色选择器 */
@@ -1435,15 +1443,20 @@
     function updateThemeInputs() {
       const theme = STYLES.find(t => t.id === state.themeId);
       const colors = state.customColors;
-      document.getElementById('theme-bg-display').textContent = colors.bg || theme.bg;
-      document.getElementById('theme-text-display').textContent = colors.text || theme.text;
-      document.getElementById('theme-accent-display').textContent = colors.accent || theme.accent;
-      document.getElementById('theme-title-display').textContent = colors.title || theme.title;
+      const effectiveBg = colors.bg || theme.bg;
+      const effectiveText = colors.text || theme.text;
+      const effectiveAccent = colors.accent || theme.accent;
+      const effectiveTitle = colors.title || theme.title;
 
-      if (colors.bg) document.getElementById('theme-bg-color').value = colors.bg;
-      if (colors.text) document.getElementById('theme-text-color').value = colors.text;
-      if (colors.accent) document.getElementById('theme-accent-color').value = colors.accent;
-      if (colors.title) document.getElementById('theme-title-color').value = colors.title;
+      document.getElementById('theme-bg-display').textContent = effectiveBg;
+      document.getElementById('theme-text-display').textContent = effectiveText;
+      document.getElementById('theme-accent-display').textContent = effectiveAccent;
+      document.getElementById('theme-title-display').textContent = effectiveTitle;
+
+      document.getElementById('theme-bg-color').value = effectiveBg;
+      document.getElementById('theme-text-color').value = effectiveText;
+      document.getElementById('theme-accent-color').value = effectiveAccent;
+      document.getElementById('theme-title-color').value = effectiveTitle;
     }
 
     function updateThemeColors() {
