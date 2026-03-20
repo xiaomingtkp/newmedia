@@ -2209,7 +2209,6 @@
       htmlContent = marked.parse(sample);
     }
     editor.value = htmlContent;
-    htmlContent = sanitizePastedHtml(htmlContent);
     editorRich.innerHTML = htmlContent;
     if (savedMode) {
       setTimeout(() => setEditorMode(savedMode), 0);
@@ -3508,6 +3507,10 @@
       sanitizeHtmlContainer(container);
       return container.innerHTML;
     }
+
+    htmlContent = sanitizePastedHtml(htmlContent);
+    editor.value = htmlContent;
+    editorRich.innerHTML = htmlContent;
 
     function prepareWechatCompatibleHtml(html) {
       const parser = new DOMParser();
