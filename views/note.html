@@ -2344,6 +2344,11 @@
       }
 
       function resetAllContent() {
+        Object.values(state.bodyImages).forEach((url) => {
+          if (typeof url === "string" && url.startsWith("blob:")) {
+            URL.revokeObjectURL(url);
+          }
+        });
         state = {
           styleId: "minimal",
           titleSize: 48,
@@ -2783,6 +2788,153 @@
         showPageNum: true,
       };
 
+      class ImageStore {
+        constructor() {
+          this.dbName = "NewMediaEditorImages";
+          this.storeName = "images";
+          this.version = 1;
+          this.db = null;
+        }
+
+        async init() {
+          if (this.db) return this.db;
+          return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, this.version);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+              this.db = request.result;
+              resolve(this.db);
+            };
+            request.onupgradeneeded = (event) => {
+              const db = event.target.result;
+              if (!db.objectStoreNames.contains(this.storeName)) {
+                const store = db.createObjectStore(this.storeName, { keyPath: "id" });
+                store.createIndex("createdAt", "createdAt", { unique: false });
+                store.createIndex("name", "name", { unique: false });
+              }
+            };
+          });
+        }
+
+        async saveImage(id, blob, metadata = {}) {
+          await this.init();
+          return new Promise((resolve, reject) => {
+            const tx = this.db.transaction([this.storeName], "readwrite");
+            const store = tx.objectStore(this.storeName);
+            const payload = {
+              id,
+              blob,
+              name: metadata.name || "image",
+              originalSize: metadata.originalSize || 0,
+              compressedSize: blob.size,
+              createdAt: Date.now(),
+              ...metadata,
+            };
+            const req = store.put(payload);
+            req.onsuccess = () => resolve(id);
+            req.onerror = () => reject(req.error);
+          });
+        }
+
+        async getImageRecord(id) {
+          await this.init();
+          return new Promise((resolve, reject) => {
+            const tx = this.db.transaction([this.storeName], "readonly");
+            const store = tx.objectStore(this.storeName);
+            const req = store.get(id);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => reject(req.error);
+          });
+        }
+
+        async getAllImages() {
+          await this.init();
+          return new Promise((resolve, reject) => {
+            const tx = this.db.transaction([this.storeName], "readonly");
+            const store = tx.objectStore(this.storeName);
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => reject(req.error);
+          });
+        }
+
+        async deleteImage(id) {
+          await this.init();
+          return new Promise((resolve, reject) => {
+            const tx = this.db.transaction([this.storeName], "readwrite");
+            const store = tx.objectStore(this.storeName);
+            const req = store.delete(id);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+          });
+        }
+      }
+
+      class ImageCompressor {
+        constructor(options = {}) {
+          this.maxWidth = options.maxWidth || 1920;
+          this.maxHeight = options.maxHeight || 1920;
+          this.quality = options.quality || 0.85;
+          this.mimeType = options.mimeType || "image/jpeg";
+        }
+
+        async compress(file) {
+          if (!file?.type?.startsWith("image/")) {
+            throw new Error("仅支持图片文件");
+          }
+          if (file.type === "image/gif" || file.type === "image/svg+xml") {
+            return file;
+          }
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error("文件读取失败"));
+            reader.onload = (event) => {
+              const img = new Image();
+              img.onerror = () => reject(new Error("图片加载失败"));
+              img.onload = () => {
+                const canvas = document.createElement("canvas");
+                let width = img.width;
+                let height = img.height;
+                let scale = 1;
+                if (width > this.maxWidth) scale = this.maxWidth / width;
+                if (height > this.maxHeight) scale = Math.min(scale, this.maxHeight / height);
+                width = Math.max(1, Math.floor(width * scale));
+                height = Math.max(1, Math.floor(height * scale));
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob(
+                  (blob) => {
+                    if (!blob) {
+                      reject(new Error("图片压缩失败"));
+                      return;
+                    }
+                    resolve(blob.size < file.size ? blob : file);
+                  },
+                  file.type === "image/png" ? "image/png" : this.mimeType,
+                  this.quality,
+                );
+              };
+              img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+          });
+        }
+
+        static formatSize(bytes) {
+          if (bytes < 1024) return `${bytes} B`;
+          if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+          return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        }
+      }
+
+      const bodyImageStore = new ImageStore();
+      const bodyImageCompressor = new ImageCompressor({ maxWidth: 1920, maxHeight: 1920, quality: 0.85 });
+      let isHydratingBodyImages = false;
+
       const renderer = new marked.Renderer();
       renderer.image = function (href, title, text) {
         let widthStyle = "";
@@ -2796,8 +2948,8 @@
           }
         }
         let imgSource = href;
-        if (href && href.startsWith("img:")) {
-          const id = href.split(":")[1];
+        if (href && (href.startsWith("img:") || href.startsWith("img://"))) {
+          const id = href.replace(/^img:\/\//, "").replace(/^img:/, "");
           if (state.bodyImages[id]) {
             imgSource = state.bodyImages[id];
           }
@@ -2806,6 +2958,79 @@
       };
 
       marked.setOptions({ breaks: true, gfm: true, renderer: renderer });
+
+      function createBodyImageId() {
+        return `img-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      }
+
+      function extractImageIdsFromMarkdown(markdown) {
+        const ids = new Set();
+        const text = String(markdown || "");
+        const reg = /!\[[^\]]*]\((img:\/\/|img:)([^)\s]+)\)/g;
+        let match;
+        while ((match = reg.exec(text))) {
+          if (match[2]) ids.add(match[2]);
+        }
+        return Array.from(ids);
+      }
+
+      async function loadBodyImageToCache(imageId) {
+        if (!imageId || state.bodyImages[imageId]) return false;
+        try {
+          const record = await bodyImageStore.getImageRecord(imageId);
+          if (!record?.blob) return false;
+          const objectUrl = URL.createObjectURL(record.blob);
+          state.bodyImages[imageId] = objectUrl;
+          return true;
+        } catch (error) {
+          console.warn("加载图片失败:", imageId, error);
+          return false;
+        }
+      }
+
+      async function hydrateBodyImagesFromContent(markdown) {
+        if (isHydratingBodyImages) return false;
+        const ids = extractImageIdsFromMarkdown(markdown).filter((id) => !state.bodyImages[id]);
+        if (!ids.length) return false;
+        isHydratingBodyImages = true;
+        let changed = false;
+        try {
+          for (const id of ids) {
+            const loaded = await loadBodyImageToCache(id);
+            if (loaded) changed = true;
+          }
+        } finally {
+          isHydratingBodyImages = false;
+        }
+        return changed;
+      }
+
+      async function processBodyImageFile(file, textarea, label = "插图") {
+        if (!file?.type?.startsWith("image/")) return;
+        if (file.size > 10 * 1024 * 1024) {
+          alert("图片大小不能超过 10MB");
+          return;
+        }
+        const imageName = (file.name || "图片").replace(/\.[^/.]+$/, "") || "图片";
+        try {
+          const compressed = await bodyImageCompressor.compress(file);
+          const imageId = createBodyImageId();
+          await bodyImageStore.saveImage(imageId, compressed, {
+            name: imageName,
+            originalName: file.name || imageName,
+            originalSize: file.size,
+            compressedSize: compressed.size,
+            mimeType: compressed.type || file.type,
+          });
+          state.bodyImages[imageId] = URL.createObjectURL(compressed);
+          insertTextAtCursor(textarea, `![${label}](img://${imageId})`);
+          updatePreview();
+          updateImageList();
+        } catch (error) {
+          console.error("图片处理失败:", error);
+          alert(`图片处理失败：${error.message || "未知错误"}`);
+        }
+      }
 
       // ==================== 状态持久化 ====================
       function saveState() {
@@ -2898,14 +3123,24 @@
         const day = String(today.getDate()).padStart(2, '0');
         document.getElementById("input-date").value = `${year}/${month}/${day}`;
 
-        loadState();
-        initUrlParams();
-        renderStyleGrid();
-        updatePreview();
-        lucide.createIcons();
-        initResizers();
-        enablePasteImage();
-        updateImageList();
+        (async () => {
+          try {
+            await bodyImageStore.init();
+          } catch (error) {
+            console.warn("图片存储初始化失败:", error);
+          }
+          loadState();
+          initUrlParams();
+          renderStyleGrid();
+          await hydrateBodyImagesFromContent(
+            document.getElementById("input-content").value,
+          );
+          updatePreview();
+          lucide.createIcons();
+          initResizers();
+          enablePasteImage();
+          updateImageList();
+        })();
       };
 
       let isToolbarOpen = false;
@@ -3025,6 +3260,17 @@
           if (navigator.clipboard.read) {
             const items = await navigator.clipboard.read();
             for (const item of items) {
+              if (item.types.some((type) => type.startsWith("image/"))) {
+                const imageType = item.types.find((type) => type.startsWith("image/"));
+                const blob = await item.getType(imageType);
+                const file = new File([blob], `pasted-${Date.now()}.${imageType.split("/")[1] || "png"}`, {
+                  type: imageType,
+                });
+                const textarea = document.getElementById("input-content");
+                await processBodyImageFile(file, textarea, "截图");
+                textarea.focus();
+                return;
+              }
               if (item.types.includes("text/html")) {
                 const blob = await item.getType("text/html");
                 html = await blob.text();
@@ -3054,7 +3300,7 @@
       function enablePasteImage() {
         document
           .getElementById("input-content")
-          .addEventListener("paste", function (e) {
+          .addEventListener("paste", async function (e) {
             const items = e.clipboardData?.items;
             const html = e.clipboardData?.getData("text/html");
             const plain = e.clipboardData?.getData("text/plain");
@@ -3065,15 +3311,9 @@
                 items[i].type.indexOf("image/") !== -1
               ) {
                 e.preventDefault();
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                  const id = Date.now().toString();
-                  state.bodyImages[id] = event.target.result;
-                  const textarea = document.getElementById("input-content");
-                  insertTextAtCursor(textarea, `![截图](img:${id})`);
-                  updatePreview();
-                };
-                reader.readAsDataURL(items[i].getAsFile());
+                const textarea = document.getElementById("input-content");
+                await processBodyImageFile(items[i].getAsFile(), textarea, "截图");
+                return;
               }
             }
 
@@ -3337,7 +3577,7 @@
           if (src && src.startsWith("data:image/")) {
             const id = Date.now().toString() + Math.floor(Math.random() * 1000);
             state.bodyImages[id] = src;
-            img.setAttribute("src", `img:${id}`);
+            img.setAttribute("src", `img://${id}`);
           }
         });
       }
@@ -3580,7 +3820,7 @@
         if (lower.startsWith("#") || lower.startsWith("/") || lower.startsWith("./") || lower.startsWith("../")) {
           return true;
         }
-        if (type === "image" && (lower.startsWith("data:image/") || lower.startsWith("blob:") || lower.startsWith("img:"))) {
+        if (type === "image" && (lower.startsWith("data:image/") || lower.startsWith("blob:") || lower.startsWith("img://") || lower.startsWith("img:"))) {
           return true;
         }
         if (lower.startsWith("https://") || lower.startsWith("http://")) return true;
@@ -3881,20 +4121,12 @@
         reader.readAsDataURL(file);
       }
 
-      function handleBodyImageUpload(input) {
+      async function handleBodyImageUpload(input) {
         const file = input.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const id = Date.now().toString();
-          state.bodyImages[id] = e.target.result;
-          const textarea = document.getElementById("input-content");
-          textarea.value = textarea.value + `\n![插图](img:${id})\n`;
-          updatePreview();
-          updateImageList();
-          input.value = "";
-        };
-        reader.readAsDataURL(file);
+        const textarea = document.getElementById("input-content");
+        await processBodyImageFile(file, textarea, "插图");
+        input.value = "";
       }
 
       function clearImage() {
@@ -3929,14 +4161,22 @@
         lucide.createIcons();
       }
 
-      function deleteBodyImage(id) {
+      async function deleteBodyImage(id) {
+        if (state.bodyImages[id]?.startsWith("blob:")) {
+          URL.revokeObjectURL(state.bodyImages[id]);
+        }
         delete state.bodyImages[id];
+        try {
+          await bodyImageStore.deleteImage(id);
+        } catch (error) {
+          console.warn("删除图片存储失败:", error);
+        }
         updatePreview();
         updateImageList();
       }
 
       function copyImageRef(id) {
-        navigator.clipboard.writeText(`![截图](img:${id})`).then(() => {
+        navigator.clipboard.writeText(`![截图](img://${id})`).then(() => {
           // 可选：显示复制成功的提示
         });
       }
@@ -3957,7 +4197,7 @@
       }
 
       function updatePreview(options = {}) {
-        const { fromOverflowGuard = false, fromFontReflow = false } = options;
+        const { fromOverflowGuard = false, fromFontReflow = false, skipHydrate = false } = options;
         if (!fromOverflowGuard && !fromFontReflow) {
           overflowRerenderCount = 0;
           extraOverflowPadding = 0;
@@ -3970,6 +4210,15 @@
         const tag = document.getElementById("input-tag").value;
         const intro = document.getElementById("input-intro").value;
         const rawContent = document.getElementById("input-content").value;
+
+        if (!skipHydrate) {
+          hydrateBodyImagesFromContent(rawContent).then((changed) => {
+            if (changed) {
+              updateImageList();
+              updatePreview({ ...options, skipHydrate: true });
+            }
+          });
+        }
 
         state.bodySize = document.getElementById("body-size").value;
         state.titleSize = document.getElementById("title-size").value;
@@ -4079,6 +4328,14 @@
         scheduleOverflowGuard(container);
         scheduleFontReflow();
       }
+
+      window.addEventListener("beforeunload", () => {
+        Object.values(state.bodyImages).forEach((url) => {
+          if (typeof url === "string" && url.startsWith("blob:")) {
+            URL.revokeObjectURL(url);
+          }
+        });
+      });
 
       function paginateHtmlToPages(html, styleConfig, date, cardWidth, cardHeight) {
         const source = document.createElement("div");
