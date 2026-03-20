@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>新媒体图文编辑器</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="fonts/fonts.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #f4f1eb;
+            --bg-deep: #ebe5dc;
+            --paper: rgba(255, 255, 255, 0.82);
+            --paper-strong: #ffffff;
+            --ink: #17191c;
+            --ink-soft: #2d3137;
+            --muted: #69707d;
+            --muted-soft: #8a93a1;
+            --accent: #f25f3a;
+            --accent-2: #0f766e;
+            --accent-dark: #d84b28;
+            --accent-soft: rgba(242, 95, 58, 0.11);
+            --line: rgba(23, 25, 28, 0.08);
+            --line-strong: rgba(23, 25, 28, 0.14);
+            --shadow-soft: 0 24px 60px rgba(19, 24, 31, 0.08);
+            --shadow-card: 0 18px 40px rgba(17, 24, 39, 0.08);
+            --radius-xl: 28px;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+        }
+
+        body {
+            font-family: "Inter", "SF Pro Display", "Noto Sans SC", sans-serif;
+            background:
+                radial-gradient(circle at 8% 10%, rgba(244, 118, 74, 0.18) 0, transparent 28%),
+                radial-gradient(circle at 85% 16%, rgba(48, 168, 141, 0.14) 0, transparent 26%),
+                radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.8) 0, transparent 42%),
+                linear-gradient(180deg, #f8f6f1 0%, var(--bg) 50%, #f1eee8 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 28px 20px 28px;
+            color: var(--ink);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: auto;
+            width: 420px;
+            height: 420px;
+            border-radius: 50%;
+            filter: blur(72px);
+            pointer-events: none;
+            opacity: 0.58;
+            z-index: 0;
+        }
+
+        body::before {
+            top: -100px;
+            left: -120px;
+            background: rgba(255, 196, 171, 0.48);
+        }
+
+        body::after {
+            right: -140px;
+            bottom: 40px;
+            background: rgba(184, 234, 222, 0.52);
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes floatGlow {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-4px);
+            }
+        }
+
+        header {
+            width: 100%;
+            max-width: 1180px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero {
+            padding: 34px;
+            background:
+                linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.74)),
+                linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0));
+            border-radius: var(--radius-xl);
+            border: 1px solid rgba(255, 255, 255, 0.75);
+            box-shadow: var(--shadow-soft);
+            backdrop-filter: blur(18px);
+            position: relative;
+            overflow: hidden;
+            animation: fadeUp 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(120deg, rgba(242, 95, 58, 0.08), transparent 36%),
+                radial-gradient(circle at 88% 22%, rgba(15, 118, 110, 0.1), transparent 22%);
+            pointer-events: none;
+        }
+
+        .hero-inner {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.82fr);
+            gap: 22px;
+            align-items: stretch;
+        }
+
+        .hero-copy {
+            text-align: left;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(23, 25, 28, 0.08);
+            color: var(--ink-soft);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+            margin-bottom: 16px;
+        }
+
+        .eyebrow::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #ffad8c);
+            box-shadow: 0 0 0 6px rgba(242, 95, 58, 0.12);
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .logo-icon {
+            width: 46px;
+            height: 46px;
+            background: linear-gradient(135deg, var(--ink), #414751);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 800;
+            box-shadow: 0 14px 28px rgba(23, 25, 28, 0.18);
+        }
+
+        h1 {
+            font-size: clamp(32px, 5vw, 54px);
+            font-weight: 800;
+            letter-spacing: -0.045em;
+            line-height: 1.05;
+            max-width: none;
+            white-space: nowrap;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 16px;
+            margin-top: 2px;
+            line-height: 1.75;
+            max-width: 60ch;
+        }
+
+        .hero-meta {
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 22px;
+        }
+
+        .hero-meta span {
+            background: rgba(255, 255, 255, 0.78);
+            color: var(--ink-soft);
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 12px;
+            border: 1px solid rgba(23, 25, 28, 0.08);
+            box-shadow: 0 8px 18px rgba(17, 24, 39, 0.04);
+        }
+
+        .hero-panel {
+            border-radius: 24px;
+            padding: 18px;
+            background:
+                linear-gradient(180deg, rgba(22, 26, 30, 0.96), rgba(31, 38, 44, 0.9));
+            color: #f5f7fa;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 14px;
+            animation: floatGlow 8s ease-in-out infinite;
+        }
+
+        .hero-panel-label {
+            color: rgba(245, 247, 250, 0.7);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .hero-panel-title {
+            font-size: 22px;
+            font-weight: 750;
+            line-height: 1.18;
+            letter-spacing: -0.03em;
+        }
+
+        .hero-panel-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .hero-panel-item {
+            padding: 14px 12px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+        }
+
+        .hero-panel-item:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.14);
+        }
+
+        .hero-panel-item strong {
+            display: block;
+            font-size: 19px;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 6px;
+        }
+
+        .hero-panel-item span {
+            display: block;
+            color: rgba(245, 247, 250, 0.66);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        main {
+            width: 100%;
+            max-width: 1180px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card {
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.7));
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            text-decoration: none;
+            color: var(--ink);
+            box-shadow: var(--shadow-card);
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            display: flex;
+            flex-direction: column;
+            min-height: 300px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+            align-items: stretch;
+            backdrop-filter: blur(18px);
+            animation: fadeUp 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        .card:nth-child(1) { animation-delay: 70ms; }
+        .card:nth-child(2) { animation-delay: 150ms; }
+        .card:nth-child(3) { animation-delay: 230ms; }
+
+        .card-cover::after {
+            background:
+                radial-gradient(circle at top right, rgba(242, 95, 58, 0.16), transparent 42%),
+                linear-gradient(180deg, transparent, rgba(255, 244, 239, 0.32));
+        }
+
+        .card-note::after {
+            background:
+                radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 42%),
+                linear-gradient(180deg, transparent, rgba(238, 250, 247, 0.34));
+        }
+
+        .card-md::after {
+            background:
+                radial-gradient(circle at top right, rgba(59, 91, 219, 0.14), transparent 42%),
+                linear-gradient(180deg, transparent, rgba(242, 245, 255, 0.34));
+        }
+
+        .card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at top right, rgba(242, 95, 58, 0.14), transparent 44%),
+                linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.12));
+            opacity: 0.78;
+            transition: opacity 180ms ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 26px 50px rgba(15, 23, 42, 0.13);
+            border-color: rgba(242, 95, 58, 0.28);
+        }
+
+        .card:hover::after {
+            opacity: 1;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,245,241,0.9));
+            color: var(--accent);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.82),
+                0 12px 22px rgba(242, 95, 58, 0.12);
+        }
+
+        .card-cover .card-icon {
+            color: var(--accent);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.82),
+                0 12px 22px rgba(242, 95, 58, 0.14);
+        }
+
+        .card-note .card-icon {
+            color: var(--accent-2);
+            background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(239, 250, 247, 0.92));
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.82),
+                0 12px 22px rgba(15, 118, 110, 0.12);
+        }
+
+        .card-md .card-icon {
+            color: #3157d5;
+            background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(242, 246, 255, 0.94));
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.82),
+                0 12px 22px rgba(49, 87, 213, 0.12);
+        }
+
+        .card-tag {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 11px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.72);
+            color: var(--ink-soft);
+            border: 1px solid rgba(23, 25, 28, 0.08);
+        }
+
+        .card-cover .card-tag {
+            color: var(--accent-dark);
+            background: rgba(255, 245, 241, 0.8);
+            border-color: rgba(242, 95, 58, 0.14);
+        }
+
+        .card-note .card-tag {
+            color: #0f766e;
+            background: rgba(238, 250, 247, 0.86);
+            border-color: rgba(15, 118, 110, 0.14);
+        }
+
+        .card-md .card-tag {
+            color: #3157d5;
+            background: rgba(242, 245, 255, 0.86);
+            border-color: rgba(49, 87, 213, 0.14);
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: 760;
+            letter-spacing: -0.03em;
+            margin-bottom: 10px;
+        }
+
+        .card-desc {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.72;
+            margin-bottom: 0;
+        }
+
+        .card-body {
+            min-height: 156px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-highlights {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .card-highlights span {
+            display: inline-flex;
+            align-items: center;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(23, 25, 28, 0.08);
+            color: var(--ink-soft);
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        .card-cover .card-highlights span {
+            background: rgba(255, 246, 242, 0.9);
+            color: var(--accent-dark);
+            border-color: rgba(242, 95, 58, 0.12);
+        }
+
+        .card-note .card-highlights span {
+            background: rgba(239, 250, 247, 0.92);
+            color: #0f766e;
+            border-color: rgba(15, 118, 110, 0.12);
+        }
+
+        .card-md .card-highlights span {
+            background: rgba(242, 245, 255, 0.92);
+            color: #3157d5;
+            border-color: rgba(49, 87, 213, 0.12);
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--muted);
+            padding-top: 18px;
+            border-top: 1px solid rgba(23, 25, 28, 0.07);
+            min-height: 76px;
+            margin-top: auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-stats {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: rgba(248, 250, 252, 0.8);
+            padding: 10px 12px;
+            border-radius: 14px;
+            border: 1px solid rgba(23, 25, 28, 0.07);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66);
+            min-height: 50px;
+            min-width: 202px;
+            transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .card:hover .card-stats {
+            transform: translateY(-1px);
+            border-color: rgba(23, 25, 28, 0.1);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 18px rgba(17, 24, 39, 0.05);
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-start;
+            min-width: 72px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--muted-soft);
+            line-height: 1;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: var(--ink);
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .card-arrow {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--accent), #ff8a68);
+            color: white;
+            box-shadow: 0 18px 26px rgba(242, 95, 58, 0.22);
+            align-self: center;
+            font-size: 18px;
+        }
+
+        .card-note .card-arrow {
+            background: linear-gradient(135deg, #0f766e, #27b0a5);
+            box-shadow: 0 18px 26px rgba(15, 118, 110, 0.2);
+        }
+
+        .card-md .card-arrow {
+            background: linear-gradient(135deg, #3157d5, #6f8dff);
+            box-shadow: 0 18px 26px rgba(49, 87, 213, 0.2);
+        }
+
+        footer {
+            margin-top: 24px;
+            text-align: center;
+            color: var(--muted-soft);
+            font-size: 12px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--muted);
+            text-decoration: none;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent);
+        }
+
+        @media (max-width: 980px) {
+            .hero-inner {
+                grid-template-columns: 1fr;
+            }
+
+            main {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                min-height: 272px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 18px 14px 24px;
+            }
+
+            .hero {
+                padding: 22px 18px;
+                border-radius: 22px;
+            }
+
+            .eyebrow {
+                margin-bottom: 14px;
+            }
+
+            .logo {
+                gap: 10px;
+                margin-bottom: 12px;
+            }
+
+            .logo-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 12px;
+            }
+
+            .subtitle {
+                font-size: 14px;
+            }
+
+            h1 {
+                white-space: normal;
+            }
+
+            .hero-panel {
+                padding: 14px;
+                border-radius: 20px;
+            }
+
+            .hero-panel-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .card {
+                min-height: auto;
+                padding: 20px;
+            }
+
+            .card-title {
+                font-size: 21px;
+            }
+
+            .card-footer {
+                gap: 12px;
+                align-items: flex-end;
+            }
+
+            .card-stats {
+                min-width: 0;
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="hero">
+            <div class="hero-inner">
+                <div class="hero-copy">
+                    <div class="eyebrow">Publishing Studio</div>
+                    <div class="logo">
+                        <div class="logo-icon">R</div>
+                        <h1>新媒体图文编辑器</h1>
+                    </div>
+                    <p class="subtitle">为封面设计、图文拆页与公众号排版提供统一工作台。页面风格、数据展示与导出链路保持一致，帮助内容团队更快完成从草稿到发布的最后一公里。</p>
+                    <div class="hero-meta">
+                        <span id="hero-total-styles">加载中</span>
+                        <span id="hero-workbench-count">加载中</span>
+                        <span id="hero-capability-count">加载中</span>
+                        <span id="hero-output-count">加载中</span>
+                        <span>适配公众号</span>
+                    </div>
+                </div>
+                <div class="hero-panel">
+                    <div class="hero-panel-label">Workspace Overview</div>
+                    <div class="hero-panel-title">一套界面里完成模板选择、实时预览、排版输出与发布前整理。</div>
+                    <div class="hero-panel-grid">
+                        <div class="hero-panel-item">
+                            <strong id="hero-total-styles-panel">加载中</strong>
+                            <span>覆盖封面、图文和公众号的主题样式库</span>
+                        </div>
+                        <div class="hero-panel-item">
+                            <strong id="hero-workbench-count-panel">加载中</strong>
+                            <span>按内容生产链路拆分的专业工作台</span>
+                        </div>
+                        <div class="hero-panel-item">
+                            <strong id="hero-capability-count-panel">加载中</strong>
+                            <span>围绕编辑、导出、分页和主题切换构建</span>
+                        </div>
+                        <div class="hero-panel-item">
+                            <strong id="hero-output-count-panel">加载中</strong>
+                            <span>覆盖图片、HTML、Markdown 等实际发布结果</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <a href="./views/cover.html" class="card card-cover">
+            <div class="card-header">
+                <div class="card-icon">🎨</div>
+                <span class="card-tag" id="cover-tag">封面</span>
+            </div>
+            <div class="card-body">
+                <h2 class="card-title" id="cover-title">封面生成器</h2>
+                <p class="card-desc" id="cover-desc">多版式模板 + 组合预设，支持裁剪、配色与布局，快速生成新媒体封面与头图。</p>
+                <div class="card-highlights" id="cover-highlights"></div>
+            </div>
+            <div class="card-footer">
+                <div class="card-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">模板</span>
+                        <span class="stat-value" id="cover-style-count">加载中</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">输出</span>
+                        <span class="stat-value" id="cover-output">加载中</span>
+                    </div>
+                </div>
+                <div class="card-arrow">→</div>
+            </div>
+        </a>
+
+        <a href="./views/note.html" class="card card-note">
+            <div class="card-header">
+                <div class="card-icon">📝</div>
+                <span class="card-tag" id="note-tag">图文</span>
+            </div>
+            <div class="card-body">
+                <h2 class="card-title" id="note-title">图文生成器</h2>
+                <p class="card-desc" id="note-desc">一键排版 + 自动分页，适合小红书/公众号图文笔记，支持批量输出。</p>
+                <div class="card-highlights" id="note-highlights"></div>
+            </div>
+            <div class="card-footer">
+                <div class="card-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">模板</span>
+                        <span class="stat-value" id="note-style-count">加载中</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">输出</span>
+                        <span class="stat-value" id="note-output">加载中</span>
+                    </div>
+                </div>
+                <div class="card-arrow">→</div>
+            </div>
+        </a>
+
+        <a href="./views/md.html" class="card card-md">
+            <div class="card-header">
+                <div class="card-icon">📄</div>
+                <span class="card-tag" id="md-tag">公众号</span>
+            </div>
+            <div class="card-body">
+                <h2 class="card-title" id="md-title">公众号编辑器</h2>
+                <p class="card-desc" id="md-desc">左侧编辑，中间实时预览，右侧主题排版与样式配置，一键复制可直接粘贴公众号。</p>
+                <div class="card-highlights" id="md-highlights"></div>
+            </div>
+            <div class="card-footer">
+                <div class="card-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">模板</span>
+                        <span class="stat-value" id="md-style-count">加载中</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">输出</span>
+                        <span class="stat-value" id="md-output">加载中</span>
+                    </div>
+                </div>
+                <div class="card-arrow">→</div>
+            </div>
+        </a>
+    </main>
+
+    <footer>
+        <div class="footer-links">
+        </div>
+        <p>© 2026 新媒体图文编辑器</p>
+    </footer>
+    <script>
+        const TOOL_CONFIG = {
+            cover: {
+                title: "封面生成器",
+                tag: "封面",
+                description: "多版式模板 + 组合预设，支持裁剪、配色与布局，快速生成新媒体封面与头图。",
+                outputs: ["JPG", "PNG"],
+                highlights: ["组合预设", "主题配色", "封面导出"],
+                source: "./views/cover.html",
+                arrayName: "STYLES",
+            },
+            note: {
+                title: "图文生成器",
+                tag: "图文",
+                description: "自动分页、统一排版与整组导出，适合小红书和内容卡片场景的长文拆图。",
+                outputs: ["整套图文", "批量导出"],
+                highlights: ["Markdown 输入", "自动分页", "成组导图"],
+                source: "./views/note.html",
+                arrayName: "STYLES",
+            },
+            md: {
+                title: "公众号编辑器",
+                tag: "公众号",
+                description: "左侧编辑，中间实时预览，右侧套用主题样式，一键复制即可粘贴到公众号后台。",
+                outputs: ["HTML", "Markdown"],
+                highlights: ["主题库", "样式配置", "复制到公众号"],
+                source: "./views/md.html",
+                arrayName: "themes",
+            },
+        };
+
+        const dataTargets = {
+            cover: document.getElementById("cover-style-count"),
+            note: document.getElementById("note-style-count"),
+            md: document.getElementById("md-style-count"),
+            hero: document.getElementById("hero-total-styles"),
+            heroPanel: document.getElementById("hero-total-styles-panel"),
+            heroWorkbench: document.getElementById("hero-workbench-count"),
+            heroWorkbenchPanel: document.getElementById("hero-workbench-count-panel"),
+            heroCapability: document.getElementById("hero-capability-count"),
+            heroCapabilityPanel: document.getElementById("hero-capability-count-panel"),
+            heroOutput: document.getElementById("hero-output-count"),
+            heroOutputPanel: document.getElementById("hero-output-count-panel"),
+        };
+
+        function countObjectIdsInArray(source, arrayName) {
+            const startToken = `const ${arrayName} = [`;
+            const startIndex = source.indexOf(startToken);
+            if (startIndex === -1) return 0;
+            const afterStart = source.slice(startIndex + startToken.length);
+            const endIndex = afterStart.indexOf("];");
+            if (endIndex === -1) return 0;
+            const block = afterStart.slice(0, endIndex);
+            return (block.match(/\bid:\s*"/g) || []).length;
+        }
+
+        function updateText(el, text) {
+            if (el) el.textContent = text;
+        }
+
+        function renderHighlights(container, items) {
+            if (!container) return;
+            container.innerHTML = "";
+            items.forEach((item) => {
+                const chip = document.createElement("span");
+                chip.textContent = item;
+                container.appendChild(chip);
+            });
+        }
+
+        function hydrateStaticCardMeta() {
+            Object.entries(TOOL_CONFIG).forEach(([key, config]) => {
+                updateText(document.getElementById(`${key}-title`), config.title);
+                updateText(document.getElementById(`${key}-tag`), config.tag);
+                updateText(document.getElementById(`${key}-desc`), config.description);
+                updateText(document.getElementById(`${key}-output`), config.outputs.join("/"));
+                renderHighlights(document.getElementById(`${key}-highlights`), config.highlights);
+            });
+        }
+
+        async function loadDynamicStats() {
+            const fallback = { cover: 9, note: 13, md: 22 };
+            try {
+                const entries = await Promise.all(
+                    Object.entries(TOOL_CONFIG).map(async ([key, config]) => {
+                        const source = await fetch(config.source).then((res) => res.text());
+                        return [key, countObjectIdsInArray(source, config.arrayName)];
+                    })
+                );
+                entries.forEach(([key, count]) => {
+                    fallback[key] = count || fallback[key];
+                });
+            } catch (error) {
+                console.warn("首页动态统计加载失败，已回退默认值。", error);
+            }
+
+            updateText(dataTargets.cover, `${fallback.cover} 套风格`);
+            updateText(dataTargets.note, `${fallback.note} 套风格`);
+            updateText(dataTargets.md, `${fallback.md} 套风格`);
+            updateText(dataTargets.hero, `${fallback.cover + fallback.note + fallback.md} 套模板风格`);
+            updateText(dataTargets.heroPanel, `${fallback.cover + fallback.note + fallback.md} 套主题`);
+            updateText(dataTargets.heroWorkbench, `${Object.keys(TOOL_CONFIG).length} 个工作台`);
+            updateText(dataTargets.heroWorkbenchPanel, `${Object.keys(TOOL_CONFIG).length} 个工作台`);
+            updateText(
+                dataTargets.heroCapability,
+                `${Object.values(TOOL_CONFIG).reduce((sum, config) => sum + config.highlights.length, 0)} 项核心能力`
+            );
+            updateText(
+                dataTargets.heroCapabilityPanel,
+                `${Object.values(TOOL_CONFIG).reduce((sum, config) => sum + config.highlights.length, 0)} 项能力`
+            );
+            updateText(
+                dataTargets.heroOutput,
+                `${new Set(Object.values(TOOL_CONFIG).flatMap((config) => config.outputs)).size} 类输出结果`
+            );
+            updateText(
+                dataTargets.heroOutputPanel,
+                `${new Set(Object.values(TOOL_CONFIG).flatMap((config) => config.outputs)).size} 类输出`
+            );
+        }
+
+        hydrateStaticCardMeta();
+        loadDynamicStats();
+    </script>
+</body>
+</html>

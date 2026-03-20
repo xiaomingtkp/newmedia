@@ -1,0 +1,3938 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>公众号编辑器</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+  <link rel="stylesheet" href="../fonts/fonts.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f1eb;
+      --panel: rgba(255, 255, 255, 0.86);
+      --panel-strong: #ffffff;
+      --ink: #17191c;
+      --ink-soft: #2d3137;
+      --muted: #69707d;
+      --muted-soft: #8a93a1;
+      --line: rgba(23, 25, 28, 0.08);
+      --line-strong: rgba(23, 25, 28, 0.14);
+      --accent: #f25f3a;
+      --accent-dark: #d84b28;
+      --accent-soft: rgba(242, 95, 58, 0.11);
+      --shadow-soft: 0 18px 40px rgba(17, 24, 39, 0.08);
+      --success: #22c55e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "SF Pro Display", "Noto Sans SC", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 10%, rgba(244, 118, 74, 0.16) 0, transparent 28%),
+        radial-gradient(circle at 85% 16%, rgba(48, 168, 141, 0.12) 0, transparent 26%),
+        radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.8) 0, transparent 42%),
+        var(--bg);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      filter: blur(70px);
+      opacity: 0.42;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      top: -120px;
+      left: -120px;
+      background: rgba(255, 196, 171, 0.5);
+    }
+
+    body::after {
+      right: -120px;
+      bottom: -120px;
+      background: rgba(184, 234, 222, 0.46);
+    }
+
+    @keyframes fadeUpSoft {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes modalInSoft {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.72);
+      background: rgba(255, 255, 255, 0.76);
+      box-shadow: 0 16px 32px rgba(17, 24, 39, 0.08);
+      backdrop-filter: blur(18px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      animation: fadeUpSoft 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+    }
+
+    .title::before {
+      content: "R";
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--ink), #414751);
+      box-shadow: 0 12px 22px rgba(23, 25, 28, 0.18);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status {
+      background: rgba(34, 197, 94, 0.12);
+      color: #15803d;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(34, 197, 94, 0.15);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      position: relative;
+      row-gap: 8px;
+    }
+
+    .page-switch {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.82);
+      min-width: 150px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--ink);
+      padding: 7px 11px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.76);
+    }
+
+    .btn:hover {
+      border-color: rgba(242, 95, 58, 0.28);
+      color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 22px rgba(17, 24, 39, 0.06);
+    }
+
+    #btnCopyX {
+      gap: 7px;
+      border-radius: 12px;
+      min-height: 34px;
+    }
+
+    #btnCopyX::before {
+      content: "X";
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.08);
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #ff8a68);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 14px 24px rgba(242, 95, 58, 0.18);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-dark);
+      border-color: var(--accent-dark);
+      color: #fff;
+    }
+
+    .btn-info {
+      background: rgba(255, 255, 255, 0.82);
+      border-color: rgba(15, 23, 42, 0.12);
+      color: #0f172a;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.76);
+    }
+
+    .btn-info:hover {
+      background: rgba(255, 255, 255, 0.94);
+      border-color: rgba(15, 23, 42, 0.22);
+      color: #0f172a;
+    }
+
+    .copy-toast {
+      position: fixed;
+      right: 18px;
+      top: 72px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(34, 197, 94, 0.95);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: all 160ms ease;
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    .copy-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .history-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.2);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+      z-index: 35;
+    }
+
+    .history-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .history-sidebar {
+      position: fixed;
+      top: 0;
+      right: -380px;
+      width: min(380px, 92vw);
+      height: 100vh;
+      background: rgba(255, 255, 255, 0.96);
+      border-left: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow: -24px 0 48px rgba(15, 23, 42, 0.12);
+      backdrop-filter: blur(16px);
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+      transition: right 220ms ease;
+    }
+
+    .history-sidebar.open {
+      right: 0;
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+    }
+
+    .history-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .history-header h3 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #111827;
+    }
+
+    .history-count {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .history-close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      color: #64748b;
+    }
+
+    .history-list {
+      flex: 1;
+      overflow: auto;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .history-item {
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 16px;
+      padding: 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+      display: grid;
+      gap: 8px;
+      transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+    }
+
+    .history-item:hover {
+      transform: translateY(-2px);
+      border-color: rgba(23, 25, 28, 0.12);
+      box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
+    }
+
+    .history-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #111827;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .history-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .history-style {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-weight: 700;
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .history-action-btn {
+      flex: 1;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #475569;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .history-action-btn.load:hover {
+      border-color: #22c55e;
+      color: #16a34a;
+    }
+
+    .history-action-btn.delete:hover {
+      border-color: #f87171;
+      color: #dc2626;
+    }
+
+    .history-empty {
+      margin: auto;
+      text-align: center;
+      color: #94a3b8;
+      display: grid;
+      gap: 8px;
+      padding: 24px;
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--muted);
+    }
+
+    .dropdown {
+      position: relative;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      right: 0;
+      top: 38px;
+      width: 260px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 16px 32px rgba(15, 23, 42, 0.18);
+      display: none;
+      overflow: hidden;
+      z-index: 20;
+      transform-origin: top right;
+      animation: modalInSoft 160ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .dropdown-item {
+      display: flex;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid #eef2f7;
+      cursor: pointer;
+    }
+
+    .dropdown-item:last-child { border-bottom: none; }
+
+    .dropdown-item strong { font-size: 13px; }
+    .dropdown-item span { font-size: 12px; color: var(--muted); }
+
+    .dropdown-item:hover { background: #f8fafc; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 1.12fr) 6px minmax(340px, 1.22fr) 6px minmax(168px, 208px);
+      gap: 6px;
+      padding: 8px;
+      flex: 1;
+      min-height: 0;
+      overflow: visible;
+      box-sizing: border-box;
+      position: relative;
+      z-index: 1;
+      animation: fadeUpSoft 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-delay: 70ms;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .splitter {
+      align-self: stretch;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(23, 25, 28, 0.08);
+      cursor: col-resize;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.78);
+      transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    .splitter:hover {
+      background: rgba(242, 95, 58, 0.1);
+      border-color: rgba(242, 95, 58, 0.22);
+      box-shadow: 0 10px 18px rgba(17, 24, 39, 0.04);
+    }
+
+    .splitter.active {
+      background: rgba(242, 95, 58, 0.16);
+      border-color: rgba(242, 95, 58, 0.3);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.84);
+      min-height: 50px;
+    }
+
+    .panel-header .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chip-btn {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--muted);
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.76);
+    }
+
+    .chip-btn:hover {
+      border-color: rgba(242, 95, 58, 0.28);
+      color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .chip-btn.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .panel-header span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .editor-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.84);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    .mode-switch {
+      display: flex;
+      gap: 6px;
+      margin-right: 6px;
+    }
+
+    .mode-btn {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--muted);
+      padding: 5px 9px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, color 120ms ease, background 120ms ease;
+    }
+
+    .mode-btn.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .editor-toolbar .btn {
+      padding: 5px 8px;
+      font-size: 11px;
+      border-radius: 10px;
+      min-height: 32px;
+    }
+
+    textarea {
+      border: none;
+      resize: none;
+      flex: 1;
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      font-family: "Inter", "Noto Sans SC", sans-serif;
+      outline: none;
+      background: transparent;
+    }
+
+    .rich-editor {
+      flex: 1;
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      font-family: "Inter", "Noto Sans SC", sans-serif;
+      outline: none;
+      background: transparent;
+      overflow: auto;
+      position: relative;
+      z-index: 1;
+      pointer-events: auto;
+    }
+
+    #searchInput,
+    #colorHexInput,
+    #fontSizeInput,
+    #lineHeightInput,
+    .sidebar-tools input,
+    .sidebar-tools select {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.86);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--ink);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.78);
+      transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    }
+
+    #searchInput:focus,
+    #colorHexInput:focus,
+    #fontSizeInput:focus,
+    #lineHeightInput:focus,
+    .sidebar-tools input:focus,
+    .sidebar-tools select:focus {
+      border-color: rgba(242, 95, 58, 0.28);
+      box-shadow: 0 0 0 3px rgba(242, 95, 58, 0.1);
+      background: rgba(255,255,255,0.96);
+    }
+
+    .panel-footer {
+      border-top: 1px solid var(--line);
+      padding: 6px 12px;
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .preview {
+      padding: 14px;
+      overflow: auto;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .preview > div[style] {
+      margin: 0 auto;
+    }
+
+
+    .preview h1 { font-size: 24px; margin: 0 0 0.6em; color: var(--accent); }
+    .preview h2 { font-size: 20px; margin: 1.2em 0 0.6em; color: var(--accent); }
+    .preview h3 { font-size: 16px; margin: 1em 0 0.5em; color: var(--accent); }
+    .preview p { margin: 0.6em 0; }
+    .preview blockquote {
+      margin: 0.8em 0;
+      padding: 10px 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      border-radius: 8px;
+    }
+    .preview pre {
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 12px;
+      border-radius: 10px;
+      overflow: auto;
+      font-size: 12px;
+    }
+    .preview code {
+      background: rgba(0, 0, 0, 0.06);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .preview .table-scroll {
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 2px;
+    }
+
+    .preview .table-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .preview .table-scroll::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.55);
+      border-radius: 999px;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 8px;
+      height: 100%;
+      overflow: hidden;
+      flex: 1;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(248,250,252,0.98) 100%);
+    }
+
+    .sidebar-tools {
+      display: grid;
+      gap: 7px;
+      padding: 8px;
+      border: 1px solid rgba(226, 232, 240, 0.92);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
+      backdrop-filter: blur(12px);
+    }
+
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      backdrop-filter: blur(2px);
+    }
+
+    .modal {
+      width: 420px;
+      max-width: 92vw;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+      font-weight: 800;
+      background: rgba(255,255,255,0.72);
+    }
+
+    .modal-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-close {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.82);
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .modal-body {
+      padding: 14px 16px 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+    }
+
+    .color-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+
+    .color-dot.active { border-color: #111827; }
+
+    .note {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .input-row input {
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 9px 10px;
+      font-size: 12px;
+      background: rgba(255,255,255,0.86);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.78);
+      transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    }
+
+    .input-row input:focus {
+      border-color: rgba(242, 95, 58, 0.28);
+      box-shadow: 0 0 0 3px rgba(242, 95, 58, 0.1);
+      background: rgba(255,255,255,0.96);
+    }
+
+    .modal-mask.show .modal {
+      animation: modalInSoft 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .align-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .align-btn {
+      flex: 1;
+      border: 1px solid var(--line);
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      background: #fff;
+      color: var(--muted);
+    }
+
+    .align-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f9fafb;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .search input {
+      border: none;
+      outline: none;
+      background: transparent;
+      flex: 1;
+      font-size: 12px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      padding: 4px 6px;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--muted);
+      background: #fff;
+      line-height: 1.1;
+    }
+
+    .chip.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .theme-list {
+      display: grid;
+      gap: 8px;
+      overflow: auto;
+      padding-right: 4px;
+      padding-bottom: 6px;
+      flex: 1;
+      min-height: 0;
+      align-content: start;
+    }
+
+    .theme-card {
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 14px;
+      padding: 8px;
+      display: grid;
+      gap: 6px;
+      cursor: pointer;
+      background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(250,250,252,0.98) 100%);
+      transition: all 180ms ease;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+      min-height: 208px;
+    }
+
+    .theme-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(148, 163, 184, 0.55);
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.1);
+    }
+
+    .theme-card.active {
+      border-color: var(--accent);
+      box-shadow: 0 18px 36px rgba(59, 130, 246, 0.18);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(244,248,255,0.98) 100%);
+    }
+
+    .theme-sample {
+      border-radius: 12px;
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      padding: 10px 10px 8px;
+      min-height: 98px;
+      max-height: 98px;
+      display: grid;
+      align-content: start;
+      gap: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .theme-sample h4 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .theme-sample p {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .theme-sample .sample-quote {
+      font-size: 11px;
+      line-height: 1.45;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border-left: 3px solid currentColor;
+      opacity: 0.92;
+    }
+
+    .theme-sample .sample-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: fit-content;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .theme-sample.theme-sample-raw {
+      padding: 6px 0 0;
+    }
+
+    .theme-sample-render {
+      min-height: 156px;
+      overflow: hidden;
+      transform: scale(0.35);
+      transform-origin: top left;
+      width: 286%;
+      pointer-events: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+
+    .theme-sample-render > div > *:first-child {
+      margin-top: 0 !important;
+    }
+
+    .theme-sample-render > div > *:last-child {
+      margin-bottom: 0 !important;
+    }
+
+    .theme-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .theme-meta strong {
+      font-size: 11px;
+      color: #111827;
+    }
+
+    .theme-meta span {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #f8fafc;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+
+    .theme-desc {
+      font-size: 10px;
+      line-height: 1.4;
+      color: #64748b;
+      min-height: 28px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .splitter { display: none; }
+      header {
+        padding: 12px 14px;
+      }
+      .top-actions {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <div class="title">公众号编辑器 <span class="status">已自动保存</span></div>
+      <select id="pageSwitch" class="page-switch" aria-label="切换页面">
+        <option value="./cover.html">封面生成器</option>
+        <option value="./note.html">图文生成器</option>
+        <option value="./md.html">公众号编辑器</option>
+        <option value="../index.html">返回首页</option>
+      </select>
+    </div>
+    <div class="top-actions">
+      <button class="btn btn-ghost" id="btnHistory">历史</button>
+      <button class="btn btn-ghost" id="btnSaveHistory">保存</button>
+      <button class="btn btn-ghost" id="btnStyleConfig">样式配置</button>
+      <div class="dropdown">
+        <button class="btn" id="btnExport">保存为 ▾</button>
+        <div class="dropdown-menu" id="exportMenu">
+          <div class="dropdown-item" data-export="html">
+            <div>📄</div>
+            <div>
+              <strong>HTML</strong>
+              <span>网页格式，包含完整样式</span>
+            </div>
+          </div>
+          <div class="dropdown-item" data-export="pdf">
+            <div>🧾</div>
+            <div>
+              <strong>PDF</strong>
+              <span>便携式文档格式</span>
+            </div>
+          </div>
+          <div class="dropdown-item" data-export="word">
+            <div>📝</div>
+            <div>
+              <strong>Word</strong>
+              <span>Microsoft Word 文档</span>
+            </div>
+          </div>
+          <div class="dropdown-item" data-export="md">
+            <div>⌨️</div>
+            <div>
+              <strong>Markdown</strong>
+              <span>原始格式</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-info" id="btnCopyX">复制到 X</button>
+      <button class="btn btn-primary" id="btnCopyWechat">一键复制到公众号</button>
+    </div>
+  </header>
+
+  <div class="layout" id="layout">
+    <section class="panel" id="panelEditor">
+      <div class="panel-header">
+        <h2>编辑</h2>
+        <span id="editorModeHint">富文本编辑，可切换 HTML 源码</span>
+      </div>
+      <div class="editor-toolbar">
+        <div class="mode-switch">
+          <button class="mode-btn active" id="modeRich" data-mode="rich">富文本</button>
+          <button class="mode-btn" id="modeHtml" data-mode="html">HTML 源码</button>
+        </div>
+        <button class="btn" data-action="bold">B</button>
+        <button class="btn" data-action="italic">I</button>
+        <button class="btn" data-action="underline">U</button>
+        <button class="btn" data-action="strike">S</button>
+        <button class="btn" data-action="code">&lt;/&gt;</button>
+        <button class="btn" data-action="h1">H1</button>
+        <button class="btn" data-action="h2">H2</button>
+        <button class="btn" data-action="h3">H3</button>
+        <button class="btn" data-action="ul">•</button>
+        <button class="btn" data-action="ol">1.</button>
+        <button class="btn" data-action="quote">❝</button>
+        <button class="btn" data-action="check">☑︎</button>
+        <button class="btn" data-action="table">表格</button>
+        <button class="btn" data-action="link">🔗</button>
+        <button class="btn" data-action="img">🖼</button>
+        <button class="btn" id="btnUploadImg">上传图片</button>
+        <button class="btn" data-action="hr">—</button>
+      </div>
+      <textarea id="editor" spellcheck="false"></textarea>
+      <div id="editorRich" class="rich-editor" contenteditable="true" spellcheck="false" style="display:none"></div>
+      <div class="panel-footer" id="editorStats">0 字 · 0 分钟阅读</div>
+    </section>
+
+    <div class="splitter" id="splitterLeft" title="拖动调整宽度"></div>
+    <section class="panel" id="panelPreview">
+      <div class="panel-header">
+        <h2>预览</h2>
+        <div class="header-actions">
+          <button class="chip-btn active" id="btnModeWechat">公众号排版</button>
+        </div>
+      </div>
+      <div id="preview" class="preview"></div>
+    </section>
+
+    <div class="splitter" id="splitterRight" title="拖动调整宽度"></div>
+    <aside class="panel" id="panelTheme">
+      <div class="panel-header">
+        <h2>样式</h2>
+        <span id="themeSummary">0 套主题</span>
+      </div>
+      <div class="sidebar">
+        <div class="sidebar-tools">
+          <div class="search">
+            🔍
+            <input id="searchInput" placeholder="搜索模板..." />
+          </div>
+          <div class="filter-group" id="filterGroup"></div>
+        </div>
+        <div class="theme-list" id="themeList"></div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="copy-toast" id="copyToast">已复制，可以去公众号粘贴使用。</div>
+  <aside class="history-sidebar" id="historySidebar">
+    <div class="history-header">
+      <div class="history-header-left">
+        <h3>历史记录</h3>
+        <span class="history-count" id="historyCount">0/20</span>
+      </div>
+      <button class="history-close-btn" id="btnCloseHistory">×</button>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </aside>
+  <div class="history-overlay" id="historyOverlay"></div>
+
+  <div class="modal-mask" id="styleModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">🎨 样式配置</div>
+        <button class="modal-close" id="closeStyleModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div>
+          <div class="input-row"><strong>主题颜色（标题）</strong></div>
+          <div class="color-grid" id="colorGrid"></div>
+          <div class="input-row">
+            <span>HEX</span>
+            <input id="colorHexInput" type="text" value="#3b82f6" />
+          </div>
+          <div class="note">此颜色会应用于一级/二级/三级标题、引用块强调。</div>
+        </div>
+        <div class="input-row">
+          <span>字体大小</span>
+          <input id="fontSizeInput" type="number" min="12" max="22" value="16" />
+          <span>px</span>
+        </div>
+        <div class="input-row">
+          <span>行高</span>
+          <input id="lineHeightInput" type="number" min="1.4" max="2.2" step="0.1" value="1.8" />
+        </div>
+        <div>
+          <div class="input-row"><span>文本对齐</span></div>
+          <div class="align-group">
+            <button class="align-btn active" data-align="left">左对齐</button>
+            <button class="align-btn" data-align="center">居中</button>
+            <button class="align-btn" data-align="justify">两端对齐</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const editor = document.getElementById("editor");
+    const editorRich = document.getElementById("editorRich");
+    const preview = document.getElementById("preview");
+    const themeList = document.getElementById("themeList");
+    const filterGroup = document.getElementById("filterGroup");
+    const searchInput = document.getElementById("searchInput");
+    const editorStats = document.getElementById("editorStats");
+    const btnUploadImg = document.getElementById("btnUploadImg");
+    const layout = document.getElementById("layout");
+    const splitterLeft = document.getElementById("splitterLeft");
+    const splitterRight = document.getElementById("splitterRight");
+    const pageSwitch = document.getElementById("pageSwitch");
+    const modeRich = document.getElementById("modeRich");
+    const modeHtml = document.getElementById("modeHtml");
+    const editorModeHint = document.getElementById("editorModeHint");
+    const btnModeWechat = document.getElementById("btnModeWechat");
+    const themeSummary = document.getElementById("themeSummary");
+    const statusBadge = document.querySelector(".status");
+    const btnHistory = document.getElementById("btnHistory");
+    const btnSaveHistory = document.getElementById("btnSaveHistory");
+    const btnCopyX = document.getElementById("btnCopyX");
+    const historySidebar = document.getElementById("historySidebar");
+    const historyOverlay = document.getElementById("historyOverlay");
+    const historyList = document.getElementById("historyList");
+    const historyCount = document.getElementById("historyCount");
+    const btnCloseHistory = document.getElementById("btnCloseHistory");
+
+    if (pageSwitch) {
+      pageSwitch.value = "./md.html";
+      pageSwitch.addEventListener("change", (e) => {
+        const target = e.target.value;
+        if (target) window.location.href = target;
+      });
+    }
+
+    let editorMode = "rich";
+    let previewMode = "wechat";
+    let htmlContent = localStorage.getItem("md-editor-html") || "";
+    let articleHistory = [];
+    let currentArticleId = null;
+
+    const filters = ["全部", "推荐", "报刊", "极简", "技术", "文艺", "品牌", "信息"];
+    const themeFilterMap = {
+      minimal: ["推荐", "信息"],
+      clean: ["推荐", "品牌"],
+      rose: ["品牌", "文艺"],
+      cream: ["推荐", "报刊"],
+      mono: ["极简", "品牌"],
+      tech: ["推荐", "技术", "信息"],
+      purple: ["品牌", "文艺"],
+      mint: ["极简", "品牌"],
+      amber: ["推荐", "报刊"],
+      navy: ["信息", "报刊"],
+      forest: ["文艺", "品牌"],
+      sunset: ["报刊", "文艺"],
+      emptiness: ["极简", "文艺"],
+      editorial: ["报刊", "文艺"],
+      concrete: ["极简", "品牌"],
+      organic: ["文艺", "品牌"],
+      guardian: ["报刊", "信息"],
+      nikkei: ["报刊", "信息"],
+      "warm-docs": ["信息", "品牌"],
+      lemonde: ["报刊", "文艺"],
+      wired: ["技术", "信息"],
+      "ai-coder": ["技术", "极简"],
+    };
+    const HUASHENG_RAW_STYLES = {
+      "wechat-default": {
+        name: "默认公众号风格",
+        styles: {
+          container: 'max-width: 740px; margin: 0 auto; padding: 10px 12px 20px 12px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 16px; line-height: 1.8 !important; color: #3f3f3f !important; background-color: #fff !important; word-wrap: break-word;',
+          h1: "font-size: 24px; font-weight: 600; color: #2c3e50 !important; line-height: 1.4 !important; margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 2px solid #3498db;",
+          h2: "font-size: 22px; font-weight: 600; color: #2c3e50 !important; line-height: 1.4 !important; margin: 28px 0 14px; padding-left: 12px; border-left: 4px solid #3498db;",
+          h3: "font-size: 20px; font-weight: 600; color: #34495e !important; line-height: 1.4 !important; margin: 24px 0 12px;",
+          h4: "font-size: 18px; font-weight: 600; color: #34495e !important; line-height: 1.4 !important; margin: 20px 0 10px;",
+          h5: "font-size: 17px; font-weight: 600; color: #34495e !important; line-height: 1.4 !important; margin: 18px 0 9px;",
+          h6: "font-size: 16px; font-weight: 600; color: #34495e !important; line-height: 1.4 !important; margin: 16px 0 8px;",
+          p: "margin: 16px 0 !important; line-height: 1.8 !important; color: #3f3f3f !important;",
+          strong: "font-weight: 600; color: #2c3e50 !important;",
+          em: "font-style: italic; color: #555 !important;",
+          a: "color: #3498db !important; text-decoration: none; border-bottom: 1px solid #3498db;",
+          ul: "margin: 16px 0; padding-left: 24px;",
+          ol: "margin: 16px 0; padding-left: 24px;",
+          li: "margin: 8px 0; line-height: 1.8 !important;",
+          blockquote: "margin: 16px 0; padding: 8px 16px; background-color: #fafafa !important; border-left: 3px solid #999; color: #666 !important; line-height: 1.5 !important;",
+          code: 'font-family: Consolas, Monaco, "Courier New", monospace; font-size: 14px; padding: 2px 6px; background-color: #f5f5f5 !important; color: #e74c3c !important; border-radius: 3px;',
+          pre: "margin: 20px 0; padding: 16px; background-color: #2d2d2d !important; border-radius: 8px; overflow-x: auto; line-height: 1.6 !important;",
+          hr: "margin: 32px 0; border: none; border-top: 1px solid #e0e0e0;",
+          img: "max-width: 100%; max-height: 600px !important; height: auto; display: block; margin: 20px auto; border-radius: 8px;",
+          table: "width: 100%; margin: 20px 0; border-collapse: collapse; font-size: 15px;",
+          th: "background-color: #f0f0f0 !important; padding: 10px; text-align: left; border: 1px solid #e0e0e0; font-weight: 600;",
+          td: "padding: 10px; border: 1px solid #e0e0e0;",
+          tr: "border-bottom: 1px solid #e0e0e0;",
+        },
+      },
+      "latepost-depth": {
+        name: "晚点风格",
+        styles: {
+          container: 'max-width: 700px; margin: 0 auto; padding: 16px 12px 36px 12px; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-size: 17px; line-height: 1.8 !important; color: #1a1a1a !important; background-color: #fff !important; word-wrap: break-word;',
+          h1: "font-size: 26px; font-weight: 700; color: #1a1a1a !important; line-height: 1.3 !important; margin: 36px 0 18px; padding-left: 16px; border-left: 5px solid #d32f2f; position: relative;",
+          h2: "font-size: 20px; font-weight: 600; color: #fff !important; line-height: 1.4 !important; margin: 32px 0 16px; padding: 12px 20px; background-color: #d32f2f !important; border-radius: 4px; position: relative;",
+          h3: "font-size: 18px; font-weight: 600; color: #d32f2f !important; line-height: 1.45 !important; margin: 28px 0 14px; padding-left: 14px; border-left: 4px solid #d32f2f; position: relative;",
+          h4: "font-size: 17px; font-weight: 600; color: #1a1a1a !important; line-height: 1.5 !important; margin: 24px 0 12px; padding: 6px 10px; background-color: #f5f5f5 !important; border-left: 3px solid #ff5252;",
+          h5: "font-size: 16px; font-weight: 600; color: #333 !important; line-height: 1.5 !important; margin: 20px 0 10px;",
+          h6: "font-size: 15px; font-weight: 500; color: #666 !important; line-height: 1.5 !important; margin: 18px 0 9px;",
+          p: "margin: 18px 0 !important; line-height: 1.85 !important; color: #1a1a1a !important;",
+          strong: "font-weight: 700; color: #d32f2f !important; background-color: rgba(211, 47, 47, 0.08) !important; padding: 2px 6px; border-radius: 3px;",
+          em: "font-style: italic; color: #666 !important;",
+          a: "color: #d32f2f !important; text-decoration: none; border-bottom: 1px solid #d32f2f;",
+          ul: "margin: 20px 0; padding-left: 28px; list-style-type: disc;",
+          ol: "margin: 20px 0; padding-left: 28px; list-style-type: decimal;",
+          li: "margin: 10px 0; line-height: 1.8 !important; color: #1a1a1a !important;",
+          blockquote: "margin: 20px 0; padding: 12px 18px; background-color: #f5f5f5 !important; border-left: 4px solid #d32f2f; color: #1a1a1a !important; font-size: 16px; line-height: 1.6 !important; position: relative; border-radius: 4px;",
+          code: 'font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 15px; padding: 3px 8px; background-color: #f5f5f5 !important; color: #d32f2f !important; border-radius: 4px; font-weight: 500;',
+          pre: "margin: 24px 0; padding: 18px; background-color: #2a2a2a !important; color: #f5f5f5 !important; border-radius: 6px; overflow-x: auto; line-height: 1.6 !important; border-left: 4px solid #d32f2f;",
+          hr: "margin: 36px auto; border: none; height: 2px; background: linear-gradient(to right, transparent, #d32f2f, transparent); max-width: 200px;",
+          img: "max-width: 100%; max-height: 500px !important; height: auto; display: block; margin: 24px auto; border-radius: 6px; border: 2px solid #d32f2f; box-shadow: 0 4px 12px rgba(211, 47, 47, 0.12);",
+          table: "width: 100%; margin: 24px 0; border-collapse: collapse; font-size: 16px; border-radius: 6px; overflow: hidden;",
+          th: "background-color: #d32f2f !important; color: #fff !important; padding: 10px 14px; text-align: left; font-weight: 600; border: none;",
+          td: "padding: 10px 14px; border: none; border-bottom: 1px solid #e0e0e0; color: #1a1a1a !important; background-color: #fff !important;",
+          tr: "border-bottom: 1px solid #e0e0e0;",
+        },
+      },
+      "wechat-ft": {
+        name: "金融时报",
+        styles: {
+          container: 'max-width: 680px; margin: 0 auto; padding: 16px 20px 40px 20px; font-family: Georgia, "Times New Roman", Times, serif; font-size: 17px; line-height: 1.75 !important; color: #33302e !important; background-color: #fff1e5 !important; word-wrap: break-word;',
+          h1: 'font-size: 38px; font-weight: 600; color: #000 !important; line-height: 1.2 !important; margin: 56px 0 24px; font-family: Georgia, serif; letter-spacing: -0.01em; border-bottom: 4px solid #990f3d; padding-bottom: 16px;',
+          h2: 'font-size: 30px; font-weight: 600; color: #990f3d !important; line-height: 1.3 !important; margin: 48px 0 20px; font-family: Georgia, serif; border-left: 6px solid #990f3d; padding-left: 20px;',
+          h3: 'font-size: 24px; font-weight: 600; color: #33302e !important; line-height: 1.4 !important; margin: 40px 0 16px; font-family: Georgia, serif; border-bottom: 2px solid #cec6b9; padding-bottom: 8px;',
+          h4: 'font-size: 20px; font-weight: 600; color: #33302e !important; line-height: 1.5 !important; margin: 32px 0 12px; font-family: Georgia, serif;',
+          h5: 'font-size: 18px; font-weight: 600; color: #33302e !important; line-height: 1.5 !important; margin: 28px 0 12px; font-family: Georgia, serif;',
+          h6: 'font-size: 17px; font-weight: 600; color: #33302e !important; line-height: 1.5 !important; margin: 24px 0 10px; font-family: Georgia, serif; font-style: italic;',
+          p: 'margin: 20px 0 !important; line-height: 1.75 !important; color: #33302e !important;',
+          strong: 'font-weight: 700; color: #990f3d !important;',
+          em: 'font-style: italic; color: #33302e !important;',
+          a: 'color: #0d7680 !important; text-decoration: none; border-bottom: 2px solid #0d7680; font-weight: 600;',
+          ul: 'margin: 24px 0; padding-left: 32px;',
+          ol: 'margin: 24px 0; padding-left: 32px;',
+          li: 'margin: 12px 0; line-height: 1.75 !important; color: #33302e !important;',
+          blockquote: 'margin: 24px 0; padding: 14px 20px; background-color: #fff1e5 !important; color: #990f3d !important; font-size: 17px; line-height: 1.6 !important; font-style: italic; font-family: Georgia, serif; border-left: 6px solid #990f3d; box-shadow: 0 2px 8px rgba(153, 15, 61, 0.1);',
+          code: 'font-family: "Courier New", Courier, monospace; font-size: 15px; padding: 3px 8px; background-color: #fff !important; color: #990f3d !important; border: 1px solid #cec6b9; font-weight: 600;',
+          pre: 'margin: 28px 0; padding: 24px; background-color: #fff !important; border-left: 4px solid #990f3d; overflow-x: auto; line-height: 1.6 !important;',
+          hr: 'margin: 48px auto; border: none; height: 2px; background-color: #990f3d !important; max-width: 80px;',
+          img: 'max-width: 100%; max-height: 600px !important; height: auto; display: block; margin: 32px auto; border: 3px solid #990f3d;',
+          table: 'width: 100%; margin: 32px 0; border-collapse: collapse; font-size: 16px; background-color: #fff !important;',
+          th: 'background-color: #990f3d !important; color: #fff !important; padding: 14px 16px; text-align: left; border: 1px solid #990f3d; font-weight: 700; font-family: Georgia, serif;',
+          td: 'padding: 14px 16px; border: 1px solid #cec6b9; color: #33302e !important; background-color: #fff !important;',
+          tr: 'border-bottom: 1px solid #cec6b9;',
+        },
+      },
+      "wechat-anthropic": {
+        name: "Claude",
+        styles: {
+          container: 'max-width: 700px; margin: 0 auto; padding: 20px 24px 40px 24px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-size: 17px; line-height: 1.75 !important; color: #2b2b2b !important; background-color: #faf9f7 !important; word-wrap: break-word; letter-spacing: -0.01em;',
+          h1: 'font-size: 32px; font-weight: 600; color: #C15F3C !important; line-height: 1.2 !important; margin: 36px 0 18px; letter-spacing: -0.02em; background: linear-gradient(135deg, #C15F3C 0%, #e97d5b 50%, #CC8B7A 100%); -webkit-background-clip: text; background-clip: text;',
+          h2: 'font-size: 26px; font-weight: 600; color: #C15F3C !important; line-height: 1.25 !important; margin: 32px 0 16px; letter-spacing: -0.015em; background: linear-gradient(135deg, #C15F3C 0%, #9DC88D 100%); -webkit-background-clip: text; background-clip: text;',
+          h3: 'font-size: 22px; font-weight: 600; color: #2b2b2b !important; line-height: 1.3 !important; margin: 28px 0 14px; letter-spacing: -0.01em;',
+          h4: 'font-size: 19px; font-weight: 600; color: #3a3a3a !important; line-height: 1.35 !important; margin: 24px 0 12px; letter-spacing: -0.01em;',
+          h5: 'font-size: 17px; font-weight: 600; color: #4a4a4a !important; line-height: 1.4 !important; margin: 20px 0 10px;',
+          h6: 'font-size: 16px; font-weight: 600; color: #5a5a5a !important; line-height: 1.45 !important; margin: 18px 0 9px;',
+          p: 'margin: 20px 0 !important; line-height: 1.8 !important; color: #2b2b2b !important; font-size: 17px; letter-spacing: -0.005em;',
+          strong: 'font-weight: 600; color: #C15F3C !important; background-color: rgba(193, 95, 60, 0.08) !important; padding: 2px 6px; border-radius: 3px;',
+          em: 'font-style: italic; color: #5a5a5a !important;',
+          a: 'color: #C15F3C !important; text-decoration: none; border-bottom: 1px solid rgba(193, 95, 60, 0.4); font-weight: 500;',
+          ul: 'margin: 20px 0; padding-left: 28px;',
+          ol: 'margin: 20px 0; padding-left: 28px;',
+          li: 'margin: 10px 0; line-height: 1.8 !important; color: #2b2b2b !important; font-size: 17px;',
+          blockquote: 'margin: 18px 0; padding: 10px 16px; background: linear-gradient(135deg, rgba(193, 95, 60, 0.06) 0%, rgba(157, 200, 141, 0.06) 100%); border-left: 4px solid #C15F3C; color: #2b2b2b !important; font-size: 17px; line-height: 1.6 !important; font-style: italic; border-radius: 6px;',
+          code: 'font-family: "SF Mono", Consolas, Monaco, monospace; font-size: 15px; padding: 2px 6px; background-color: rgba(193, 95, 60, 0.08) !important; color: #C15F3C !important; border-radius: 6px; font-weight: 500; border: 1px solid rgba(193, 95, 60, 0.15);',
+          pre: 'margin: 24px 0; padding: 20px; background: linear-gradient(135deg, #2b2b2b 0%, #3a3a3a 100%); color: #f5f5f5 !important; border-radius: 10px; overflow-x: auto; line-height: 1.55 !important; box-shadow: 0 4px 16px rgba(193, 95, 60, 0.12);',
+          hr: 'margin: 36px auto; border: none; height: 2px; background: linear-gradient(to right, transparent, rgba(193, 95, 60, 0.3), rgba(157, 200, 141, 0.3), transparent); max-width: 200px;',
+          img: 'max-width: 100%; max-height: 500px !important; height: auto; display: block; margin: 24px auto; border-radius: 10px; box-shadow: 0 6px 24px rgba(193, 95, 60, 0.1);',
+          table: 'width: 100%; margin: 24px 0; border-collapse: collapse; font-size: 16px; border-radius: 8px; overflow: hidden;',
+          th: 'background: linear-gradient(135deg, rgba(193, 95, 60, 0.08) 0%, rgba(157, 200, 141, 0.08) 100%); padding: 12px 16px; text-align: left; border: none; font-weight: 600; color: #2b2b2b !important; border-bottom: 2px solid rgba(193, 95, 60, 0.2);',
+          td: 'padding: 12px 16px; border: none; border-bottom: 1px solid rgba(193, 95, 60, 0.1); color: #2b2b2b !important;',
+          tr: 'border: none;',
+        },
+      },
+      "wechat-tech": {
+        name: "技术风格",
+        styles: {
+          container: 'max-width: 740px; margin: 0 auto; padding: 10px 20px 20px 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 16px; line-height: 1.75 !important; color: #2c3e50 !important; background-color: #fff !important; word-wrap: break-word;',
+          h1: 'font-size: 26px; font-weight: 700; color: #1a1a1a !important; line-height: 1.3 !important; margin: 36px 0 18px; padding: 0 0 12px; border-bottom: 3px solid #0066cc;',
+          h2: 'font-size: 22px; font-weight: 700; color: #1a1a1a !important; line-height: 1.3 !important; margin: 32px 0 16px; padding-left: 16px; padding-top: 4px; padding-bottom: 4px; border-left: 5px solid #00a67d; background: linear-gradient(to right, #f0f9ff 0%, transparent 100%);',
+          h3: 'font-size: 20px; font-weight: 600; color: #2c3e50 !important; line-height: 1.4 !important; margin: 28px 0 14px; padding-left: 12px; border-left: 3px solid #ff9800;',
+          h4: 'font-size: 18px; font-weight: 600; color: #34495e !important; line-height: 1.4 !important; margin: 24px 0 12px;',
+          h5: 'font-size: 17px; font-weight: 600; color: #34495e !important; line-height: 1.4 !important; margin: 20px 0 10px;',
+          h6: 'font-size: 16px; font-weight: 600; color: #34495e !important; line-height: 1.4 !important; margin: 18px 0 9px;',
+          p: 'margin: 18px 0 !important; line-height: 1.8 !important; color: #3a3a3a !important;',
+          strong: 'font-weight: 700; color: #1a1a1a !important; background-color: #fff3cd !important; padding: 2px 4px; border-radius: 8px;',
+          em: 'font-style: italic; color: #666 !important;',
+          a: 'color: #0066cc !important; text-decoration: none; border-bottom: 1px solid #0066cc;',
+          ul: 'margin: 18px 0; padding-left: 28px;',
+          ol: 'margin: 18px 0; padding-left: 28px;',
+          li: 'margin: 10px 0; line-height: 1.8 !important; color: #3a3a3a !important;',
+          blockquote: 'margin: 16px 0; padding: 8px 16px; background-color: #f5f9fc !important; border-left: 3px solid #2196f3; color: #555 !important; line-height: 1.5 !important;',
+          code: 'font-family: "Fira Code", Consolas, Monaco, "Courier New", monospace; font-size: 14px; padding: 3px 6px; background-color: #ffe6e6 !important; color: #d63031 !important; border-radius: 8px; font-weight: 500;',
+          pre: 'margin: 24px 0; padding: 20px; background-color: #1e1e1e !important; border-radius: 8px; overflow-x: auto; line-height: 1.6 !important; box-shadow: 0 2px 8px rgba(0,0,0,0.1);',
+          hr: 'margin: 36px 0; border: none; height: 2px; background: linear-gradient(to right, transparent, #0066cc, transparent);',
+          img: 'max-width: 100%; max-height: 600px !important; height: auto; display: block; margin: 24px auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);',
+          table: 'width: 100%; margin: 24px 0; border-collapse: collapse; font-size: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.1);',
+          th: 'background-color: #0066cc !important; color: #fff !important; padding: 12px; text-align: left; border: 1px solid #0052a3; font-weight: 600;',
+          td: 'padding: 12px; border: 1px solid #e0e0e0; background-color: #fff !important;',
+          tr: 'border-bottom: 1px solid #e0e0e0;',
+        },
+      },
+      "wechat-elegant": {
+        name: "优雅简约",
+        styles: {
+          container: 'max-width: 720px; margin: 0 auto; padding: 12px 20px 30px 20px; font-family: "Songti SC", "SimSun", Georgia, serif; font-size: 17px; line-height: 1.85 !important; color: #333 !important; background-color: #fff !important; word-wrap: break-word;',
+          h1: 'font-size: 26px; font-weight: 400; color: #1a1a1a !important; line-height: 1.4 !important; margin: 36px 0 18px; text-align: center; letter-spacing: 2px;',
+          h2: 'font-size: 22px; font-weight: 400; color: #2c2c2c !important; line-height: 1.45 !important; margin: 32px 0 16px; text-align: center; letter-spacing: 1px;',
+          h3: 'font-size: 19px; font-weight: 400; color: #3a3a3a !important; line-height: 1.5 !important; margin: 28px 0 14px; letter-spacing: 0.5px;',
+          h4: 'font-size: 17px; font-weight: 400; color: #444 !important; line-height: 1.55 !important; margin: 24px 0 12px;',
+          h5: 'font-size: 16px; font-weight: 400; color: #555 !important; line-height: 1.55 !important; margin: 20px 0 10px;',
+          h6: 'font-size: 15px; font-weight: 400; color: #666 !important; line-height: 1.55 !important; margin: 18px 0 9px;',
+          p: 'margin: 18px 0 !important; line-height: 1.85 !important; color: #444 !important; text-indent: 2em; letter-spacing: 0.5px;',
+          strong: 'font-weight: 600; color: #1a1a1a !important;',
+          em: 'font-style: italic; color: #666 !important;',
+          a: 'color: #8b7355 !important; text-decoration: none; border-bottom: 1px dotted #8b7355;',
+          ul: 'margin: 18px 0; padding-left: 28px;',
+          ol: 'margin: 18px 0; padding-left: 28px;',
+          li: 'margin: 10px 0; line-height: 1.85 !important;',
+          blockquote: 'margin: 18px auto; padding: 10px 20px; background-color: transparent !important; border-left: 2px solid #ccc; color: #666 !important; max-width: 600px; line-height: 1.6 !important;',
+          code: 'font-family: Menlo, Monaco, "Courier New", monospace; font-size: 14px; padding: 2px 6px; background-color: #f5f5f5 !important; color: #8b4513 !important; border-radius: 3px;',
+          pre: 'margin: 24px 0; padding: 18px; background-color: #f9f9f9 !important; border: 1px solid #e5e5e5; border-radius: 8px; overflow-x: auto; line-height: 1.7 !important;',
+          hr: 'margin: 36px auto; border: none; text-align: center; height: 1px; background-color: #e0e0e0 !important; max-width: 200px;',
+          img: 'max-width: 100%; max-height: 500px !important; height: auto; display: block; margin: 24px auto; border-radius: 8px;',
+          table: 'width: 100%; margin: 24px 0; border-collapse: collapse; font-size: 15px;',
+          th: 'background-color: #f8f8f8 !important; padding: 10px; text-align: left; border-bottom: 2px solid #d0d0d0; font-weight: 400; color: #555 !important;',
+          td: 'padding: 10px; border-bottom: 1px solid #e5e5e5;',
+          tr: 'border-bottom: 1px solid #e5e5e5;',
+        },
+      },
+      "wechat-deepread": {
+        name: "深度阅读",
+        styles: {
+          container: 'max-width: 680px; margin: 0 auto; padding: 14px 12px 32px 12px; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 17px; line-height: 1.75 !important; color: #1a1a1a !important; background-color: #fff !important; word-wrap: break-word; letter-spacing: 0.01em;',
+          h1: 'font-size: 26px; font-weight: 700; color: #0a0a0a !important; line-height: 1.25 !important; margin: 36px 0 18px; letter-spacing: -0.02em;',
+          h2: 'font-size: 22px; font-weight: 700; color: #0a0a0a !important; line-height: 1.3 !important; margin: 32px 0 16px; letter-spacing: -0.01em;',
+          h3: 'font-size: 19px; font-weight: 600; color: #1a1a1a !important; line-height: 1.35 !important; margin: 28px 0 14px;',
+          h4: 'font-size: 17px; font-weight: 600; color: #2a2a2a !important; line-height: 1.4 !important; margin: 24px 0 12px;',
+          h5: 'font-size: 16px; font-weight: 600; color: #3a3a3a !important; line-height: 1.45 !important; margin: 20px 0 10px;',
+          h6: 'font-size: 15px; font-weight: 500; color: #4a4a4a !important; line-height: 1.45 !important; margin: 18px 0 9px;',
+          p: 'margin: 20px 0 !important; line-height: 1.8 !important; color: #1a1a1a !important;',
+          strong: 'font-weight: 700; color: #0a0a0a !important;',
+          em: 'font-style: italic; color: #2a2a2a !important;',
+          a: 'color: #0066cc !important; text-decoration: none; border-bottom: 1px solid #0066cc;',
+          ul: 'margin: 20px 0; padding-left: 28px;',
+          ol: 'margin: 20px 0; padding-left: 28px;',
+          li: 'margin: 10px 0; line-height: 1.8 !important; color: #1a1a1a !important;',
+          blockquote: 'margin: 20px 0; padding: 12px 18px; background-color: #f8f9fa !important; border-left: 4px solid #0a0a0a; color: #1a1a1a !important; font-size: 16px; line-height: 1.6 !important; font-style: normal;',
+          code: 'font-family: "SF Mono", Consolas, Monaco, "Courier New", monospace; font-size: 15px; padding: 2px 6px; background-color: #f5f5f5 !important; color: #d73a49 !important; border-radius: 3px;',
+          pre: 'margin: 24px 0; padding: 20px; background-color: #f6f8fa !important; border-radius: 8px; overflow-x: auto; line-height: 1.6 !important; border: 1px solid #e1e4e8;',
+          hr: 'margin: 36px 0; border: none; height: 1px; background-color: #e1e4e8 !important;',
+          img: 'max-width: 100%; max-height: 500px !important; height: auto; display: block; margin: 24px auto; border-radius: 8px;',
+          table: 'width: 100%; margin: 24px 0; border-collapse: collapse; font-size: 16px;',
+          th: 'background-color: #f6f8fa !important; padding: 10px 14px; text-align: left; border: 1px solid #e1e4e8; font-weight: 600; color: #1a1a1a !important;',
+          td: 'padding: 10px 14px; border: 1px solid #e1e4e8; color: #1a1a1a !important;',
+          tr: 'border-bottom: 1px solid #e1e4e8;',
+        },
+      },
+      "wechat-nyt": {
+        name: "纽约时报",
+        styles: {
+          container: 'max-width: 680px; margin: 0 auto; padding: 20px 12px 48px 12px; font-family: Georgia, "Times New Roman", Times, serif; font-size: 18px; line-height: 1.8 !important; color: #121212 !important; background-color: #fff !important; word-wrap: break-word;',
+          h1: 'font-size: 42px; font-weight: 700; color: #000 !important; line-height: 1.2 !important; margin: 56px 0 16px; font-family: Georgia, serif; letter-spacing: -0.02em; border-bottom: 1px solid #000; padding-bottom: 16px;',
+          h2: 'font-size: 32px; font-weight: 700; color: #000 !important; line-height: 1.3 !important; margin: 48px 0 16px; font-family: Georgia, serif; letter-spacing: -0.01em;',
+          h3: 'font-size: 24px; font-weight: 700; color: #121212 !important; line-height: 1.4 !important; margin: 40px 0 16px; font-family: Georgia, serif;',
+          h4: 'font-size: 20px; font-weight: 700; color: #1a1a1a !important; line-height: 1.5 !important; margin: 32px 0 12px; font-family: Georgia, serif;',
+          h5: 'font-size: 18px; font-weight: 700; color: #2a2a2a !important; line-height: 1.5 !important; margin: 28px 0 12px; font-family: Georgia, serif;',
+          h6: 'font-size: 16px; font-weight: 700; color: #3a3a3a !important; line-height: 1.5 !important; margin: 24px 0 10px; font-family: Georgia, serif; font-style: italic;',
+          p: 'margin: 20px 0 !important; line-height: 1.8 !important; color: #121212 !important; text-align: left;',
+          strong: 'font-weight: 700; color: #000 !important;',
+          em: 'font-style: italic; color: #121212 !important;',
+          a: 'color: #326891 !important; text-decoration: none; border-bottom: 1px solid #326891; word-break: break-all;',
+          ul: 'margin: 24px 0; padding-left: 40px;',
+          ol: 'margin: 24px 0; padding-left: 40px;',
+          li: 'margin: 12px 0; line-height: 1.8 !important; color: #121212 !important; text-align: left;',
+          blockquote: 'margin: 24px 0; padding: 14px 24px; background-color: #f7f7f7 !important; border-left: 5px solid #121212; color: #121212 !important; font-size: 18px; line-height: 1.6 !important; font-style: italic; font-family: Georgia, serif;',
+          code: 'font-family: "Courier New", Courier, monospace; font-size: 16px; padding: 2px 6px; background-color: #f0f0f0 !important; color: #666 !important; border: 1px solid #ddd;',
+          pre: 'margin: 28px 0; padding: 24px; background-color: #f7f7f7 !important; border: 1px solid #ddd; overflow-x: auto; line-height: 1.6 !important;',
+          hr: 'margin: 48px auto; border: none; height: 1px; background-color: #ddd !important; max-width: 100px;',
+          img: 'max-width: 100%; max-height: 600px !important; height: auto; display: block; margin: 32px auto; border: 1px solid #ddd;',
+          table: 'width: 100%; margin: 32px 0; border-collapse: collapse; font-size: 16px; border: 1px solid #ddd;',
+          th: 'background-color: #f7f7f7 !important; padding: 14px 16px; text-align: left; border: 1px solid #ddd; font-weight: 700; color: #121212 !important; font-family: Georgia, serif;',
+          td: 'padding: 14px 16px; border: 1px solid #ddd; color: #121212 !important;',
+          tr: 'border-bottom: 1px solid #ddd;',
+        },
+      },
+      "wechat-jonyive": {
+        name: "Jony Ive",
+        styles: {
+          container: 'max-width: 620px; margin: 0 auto; padding: 16px 24px 40px 24px; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif; font-size: 17px; line-height: 1.6 !important; color: #6e6e73 !important; background-color: #fbfbfd !important; word-wrap: break-word;',
+          h1: 'font-size: 39px; font-weight: 200; color: #1d1d1f !important; line-height: 1.15 !important; margin: 48px 0 24px; letter-spacing: -0.025em;',
+          h2: 'font-size: 28px; font-weight: 300; color: #1d1d1f !important; line-height: 1.2 !important; margin: 40px 0 20px; letter-spacing: -0.018em;',
+          h3: 'font-size: 20px; font-weight: 400; color: #1d1d1f !important; line-height: 1.25 !important; margin: 32px 0 16px; letter-spacing: -0.008em;',
+          h4: 'font-size: 15px; font-weight: 500; color: #1d1d1f !important; line-height: 1.3 !important; margin: 24px 0 12px;',
+          h5: 'font-size: 13px; font-weight: 500; color: #1d1d1f !important; line-height: 1.35 !important; margin: 20px 0 10px;',
+          h6: 'font-size: 12px; font-weight: 500; color: #1d1d1f !important; line-height: 1.4 !important; margin: 16px 0 8px;',
+          p: 'margin: 20px 0 !important; line-height: 1.6 !important; color: #6e6e73 !important; font-weight: 300;',
+          strong: 'font-weight: 500; color: #1d1d1f !important;',
+          em: 'font-style: normal; color: #6e6e73 !important; font-weight: 300;',
+          a: 'color: #06c !important; text-decoration: none; font-weight: 400;',
+          ul: 'margin: 20px 0; padding-left: 28px; list-style-type: disc;',
+          ol: 'margin: 20px 0; padding-left: 28px; list-style-type: decimal;',
+          li: 'margin: 12px 0; line-height: 1.6 !important; color: #6e6e73 !important; padding-left: 24px; position: relative; font-weight: 300;',
+          blockquote: 'margin: 32px auto; padding: 0; background-color: transparent !important; border-left: none; color: #1d1d1f !important; font-size: 18px; line-height: 1.4 !important; font-weight: 300; text-align: center; max-width: 520px; font-style: normal;',
+          code: 'font-family: "SF Mono", Monaco, Menlo, monospace; font-size: 14px; padding: 2px 6px; background-color: #f5f5f7 !important; color: #6e6e73 !important; border-radius: 6px; font-weight: 400;',
+          pre: 'margin: 28px 0; padding: 20px; background-color: #f5f5f7 !important; border-radius: 10px; overflow-x: auto; line-height: 1.5 !important;',
+          hr: 'margin: 56px auto; border: none; height: 1px; background-color: #d2d2d7 !important; max-width: 48px;',
+          img: 'max-width: 100%; max-height: 600px !important; height: auto; display: block; margin: 40px auto; border-radius: 10px;',
+          table: 'width: 100%; margin: 32px 0; border-collapse: collapse; font-size: 15px;',
+          th: 'background-color: #f5f5f7 !important; padding: 12px 16px; text-align: left; border: none; font-weight: 500; color: #1d1d1f !important;',
+          td: 'padding: 12px 16px; border: none; border-top: 1px solid #d2d2d7; color: #6e6e73 !important; font-weight: 300;',
+          tr: 'border: none;',
+        },
+      },
+      "wechat-medium": {
+        name: "Medium 长文",
+        styles: {
+          container: 'max-width: 680px; margin: 0 auto; padding: 20px 12px 40px 12px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 17px; line-height: 1.7 !important; color: #242424 !important; background-color: #fff !important; word-wrap: break-word; letter-spacing: -0.003em;',
+          h1: 'font-size: 28px; font-weight: 700; color: #242424 !important; line-height: 1.2 !important; margin: 36px 0 18px; letter-spacing: -0.02em; font-family: Georgia, "Times New Roman", serif;',
+          h2: 'font-size: 24px; font-weight: 700; color: #242424 !important; line-height: 1.25 !important; margin: 32px 0 16px; letter-spacing: -0.015em; font-family: Georgia, "Times New Roman", serif;',
+          h3: 'font-size: 20px; font-weight: 700; color: #242424 !important; line-height: 1.3 !important; margin: 28px 0 14px; letter-spacing: -0.01em; font-family: Georgia, "Times New Roman", serif;',
+          h4: 'font-size: 18px; font-weight: 700; color: #242424 !important; line-height: 1.35 !important; margin: 24px 0 12px; font-family: Georgia, "Times New Roman", serif;',
+          h5: 'font-size: 17px; font-weight: 700; color: #242424 !important; line-height: 1.4 !important; margin: 20px 0 10px; font-family: Georgia, "Times New Roman", serif;',
+          h6: 'font-size: 16px; font-weight: 700; color: #242424 !important; line-height: 1.4 !important; margin: 18px 0 9px; font-family: Georgia, "Times New Roman", serif;',
+          p: 'margin: 20px 0 !important; line-height: 1.75 !important; color: #242424 !important; font-size: 17px; letter-spacing: -0.003em;',
+          strong: 'font-weight: 700; color: #242424 !important;',
+          em: 'font-style: italic; color: #242424 !important;',
+          a: 'color: #242424 !important; text-decoration: none; border-bottom: 1px solid #242424;',
+          ul: 'margin: 20px 0; padding-left: 32px;',
+          ol: 'margin: 20px 0; padding-left: 32px;',
+          li: 'margin: 10px 0; line-height: 1.7 !important; color: #242424 !important; font-size: 17px;',
+          blockquote: 'margin: 20px 0; padding: 0 20px; border-left: 3px solid #242424; color: #242424 !important; font-size: 17px; line-height: 1.6 !important; font-style: italic; font-family: Georgia, "Times New Roman", serif;',
+          code: 'font-family: Menlo, Monaco, "Courier New", monospace; font-size: 15px; padding: 2px 6px; background-color: #f5f5f5 !important; color: #d73a49 !important; border-radius: 3px;',
+          pre: 'margin: 24px 0; padding: 20px; background-color: #f7f7f7 !important; border-radius: 8px; overflow-x: auto; line-height: 1.5 !important;',
+          hr: 'margin: 36px auto; border: none; text-align: center; height: 1px; background-color: #e6e6e6 !important; max-width: 300px;',
+          img: 'max-width: 100%; max-height: 500px !important; height: auto; display: block; margin: 24px auto;',
+          table: 'width: 100%; margin: 24px 0; border-collapse: collapse; font-size: 16px;',
+          th: 'background-color: #f7f7f7 !important; padding: 10px 14px; text-align: left; border-bottom: 2px solid #e6e6e6; font-weight: 700; color: #242424 !important;',
+          td: 'padding: 10px 14px; border-bottom: 1px solid #e6e6e6; color: #242424 !important;',
+          tr: 'border: none;',
+        },
+      },
+      "wechat-apple": {
+        name: "Apple 极简",
+        styles: {
+          container: 'max-width: 640px; margin: 0 auto; padding: 20px 12px 40px 12px; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif; font-size: 17px; line-height: 1.65 !important; color: #86868b !important; background-color: #fbfbfd !important; word-wrap: break-word;',
+          h1: 'font-size: 32px; font-weight: 600; color: #1d1d1f !important; line-height: 1.15 !important; margin: 36px 0 18px; letter-spacing: -0.015em;',
+          h2: 'font-size: 26px; font-weight: 600; color: #1d1d1f !important; line-height: 1.2 !important; margin: 32px 0 16px; letter-spacing: -0.012em;',
+          h3: 'font-size: 21px; font-weight: 600; color: #1d1d1f !important; line-height: 1.25 !important; margin: 28px 0 14px; letter-spacing: -0.009em;',
+          h4: 'font-size: 18px; font-weight: 600; color: #1d1d1f !important; line-height: 1.3 !important; margin: 24px 0 12px;',
+          h5: 'font-size: 17px; font-weight: 600; color: #1d1d1f !important; line-height: 1.35 !important; margin: 20px 0 10px;',
+          h6: 'font-size: 16px; font-weight: 600; color: #1d1d1f !important; line-height: 1.4 !important; margin: 18px 0 9px;',
+          p: 'margin: 20px 0 !important; line-height: 1.7 !important; color: #86868b !important; font-size: 17px;',
+          strong: 'font-weight: 600; color: #1d1d1f !important;',
+          em: 'font-style: normal; color: #86868b !important;',
+          a: 'color: #06c !important; text-decoration: none;',
+          ul: 'margin: 20px 0; padding-left: 28px; list-style-type: disc;',
+          ol: 'margin: 20px 0; padding-left: 28px; list-style-type: decimal;',
+          li: 'margin: 10px 0; line-height: 1.65 !important; color: #86868b !important; padding-left: 24px; position: relative;',
+          blockquote: 'margin: 24px auto; padding: 0; background-color: transparent !important; border-left: none; color: #1d1d1f !important; font-size: 18px; line-height: 1.45 !important; font-weight: 600; text-align: center; max-width: 560px; font-style: normal;',
+          code: 'font-family: "SF Mono", Monaco, Menlo, monospace; font-size: 15px; padding: 2px 6px; background-color: #f5f5f7 !important; color: #86868b !important; border-radius: 8px;',
+          pre: 'margin: 24px 0; padding: 20px; background-color: #f5f5f7 !important; border-radius: 10px; overflow-x: auto; line-height: 1.5 !important;',
+          hr: 'margin: 36px auto; border: none; height: 1px; background-color: #d2d2d7 !important; max-width: 48px;',
+          img: 'max-width: 100%; max-height: 500px !important; height: auto; display: block; margin: 24px auto; border-radius: 10px;',
+          table: 'width: 100%; margin: 24px 0; border-collapse: collapse; font-size: 15px;',
+          th: 'background-color: #f5f5f7 !important; padding: 10px 16px; text-align: left; border: none; font-weight: 600; color: #1d1d1f !important;',
+          td: 'padding: 10px 16px; border: none; border-top: 1px solid #d2d2d7; color: #86868b !important;',
+          tr: 'border: none;',
+        },
+      },
+    };
+    Object.assign(HUASHENG_RAW_STYLES, {
+      "kenya-emptiness": {
+        name: "原研哉·空",
+        styles: {
+          container: 'max-width: 640px; margin: 0 auto; padding: 28px 24px 80px 24px; font-family: "Hiragino Sans", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 16px; line-height: 2.5 !important; color: #333 !important; background-color: #fff !important; word-wrap: break-word;',
+          h1: "font-size: 24px; font-weight: 300; color: #000 !important; line-height: 2 !important; margin: 80px 0 60px; letter-spacing: 0.5em; text-align: center; padding: 0;",
+          h2: "font-size: 18px; font-weight: 300; color: #333 !important; line-height: 2 !important; margin: 70px 0 40px; letter-spacing: 0.3em; padding-left: 40px;",
+          h3: "font-size: 16px; font-weight: 400; color: #666 !important; line-height: 2 !important; margin: 60px 0 30px; letter-spacing: 0.2em;",
+          h4: "font-size: 15px; font-weight: 400; color: #999 !important; line-height: 2 !important; margin: 40px 0 20px; letter-spacing: 0.1em;",
+          h5: "font-size: 14px; font-weight: 400; color: #999 !important; line-height: 2 !important; margin: 30px 0 15px;",
+          h6: "font-size: 14px; font-weight: 400; color: #bbb !important; line-height: 2 !important; margin: 20px 0 10px;",
+          p: "margin: 40px 0 !important; line-height: 2.5 !important; color: #666 !important; letter-spacing: 0.05em;",
+          strong: "font-weight: 500; color: #000 !important; letter-spacing: 0.1em;",
+          em: "font-style: normal; color: #999 !important; font-size: 14px;",
+          a: "color: #999 !important; text-decoration: none; border-bottom: 1px solid #e0e0e0; padding-bottom: 2px;",
+          ul: "margin: 60px 0; padding-left: 32px; list-style-type: circle;",
+          ol: "margin: 60px 0; padding-left: 32px; list-style-type: decimal;",
+          li: "margin: 30px 0; line-height: 2.5 !important; color: #666 !important; padding-left: 40px; position: relative;",
+          blockquote: "margin: 40px auto; padding: 0; background-color: transparent !important; border: none; color: #999 !important; font-size: 14px; line-height: 2.2 !important; text-align: center; max-width: 480px; letter-spacing: 0.2em;",
+          code: 'font-family: "SF Mono", Menlo, monospace; font-size: 13px; padding: 4px 8px; background-color: #f5f5f5 !important; color: #666 !important; border-radius: 2px;',
+          pre: "margin: 50px 0; padding: 40px; background-color: #f9f9f9 !important; border: none; border-radius: 0; overflow-x: auto; line-height: 2 !important;",
+          hr: "margin: 80px auto; border: none; width: 40px; height: 1px; background-color: #e0e0e0 !important;",
+          img: "max-width: 100%; max-height: 500px !important; height: auto; display: block; margin: 60px auto;",
+          table: "width: 100%; margin: 60px 0; border-collapse: collapse; font-size: 14px;",
+          th: "background-color: transparent !important; padding: 20px; text-align: left; border-bottom: 1px solid #e0e0e0; font-weight: 400; color: #999 !important;",
+          td: "padding: 20px; border-bottom: 1px solid #f5f5f5; color: #666 !important;",
+          tr: "border: none;",
+        },
+      },
+      "hische-editorial": {
+        name: "Hische·编辑部",
+        styles: {
+          container: 'max-width: 700px; margin: 0 auto; padding: 20px 20px 50px 20px; font-family: "Crimson Text", Garamond, serif; font-size: 17px; line-height: 1.75 !important; color: #2c2c2c !important; background-color: #fffef9 !important; word-wrap: break-word;',
+          h1: 'font-size: 32px; font-weight: 400; color: #c9302c !important; line-height: 1.2 !important; margin: 36px 0 18px; letter-spacing: -0.02em; font-family: "Bodoni MT", "Didot", serif; text-align: center;',
+          h2: 'font-size: 26px; font-weight: 400; color: #2c2c2c !important; line-height: 1.25 !important; margin: 32px 0 16px; letter-spacing: -0.015em; font-family: "Bodoni MT", "Didot", serif; border-top: 1px solid #c9302c; border-bottom: 1px solid #c9302c; padding: 10px 0; text-align: center;',
+          h3: 'font-size: 21px; font-weight: 400; color: #2c2c2c !important; line-height: 1.3 !important; margin: 28px 0 14px; font-family: "Bodoni MT", "Didot", serif;',
+          h4: "font-size: 17px; font-weight: 600; color: #2c2c2c !important; line-height: 1.35 !important; margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 0.05em;",
+          h5: "font-size: 16px; font-weight: 400; color: #2c2c2c !important; line-height: 1.4 !important; margin: 20px 0 10px; font-style: italic;",
+          h6: "font-size: 15px; font-weight: 400; color: #666 !important; line-height: 1.45 !important; margin: 18px 0 9px;",
+          p: "margin: 20px 0 !important; line-height: 1.8 !important; color: #2c2c2c !important; text-align: justify;",
+          strong: "font-weight: 700; color: #c9302c !important; letter-spacing: 0.02em;",
+          em: "font-style: italic; color: #2c2c2c !important;",
+          a: "color: #c9302c !important; text-decoration: none; border-bottom: 1px solid #c9302c;",
+          ul: "margin: 20px 0; padding-left: 25px; list-style: disc;",
+          ol: "margin: 20px 0; padding-left: 25px;",
+          li: "margin: 10px 0; line-height: 1.75 !important; color: #2c2c2c !important;",
+          blockquote: 'margin: 20px 0; padding: 0 24px; background-color: transparent !important; border-left: none; color: #2c2c2c !important; font-size: 17px; line-height: 1.55 !important; font-style: italic; text-align: center; font-family: "Bodoni MT", "Didot", serif;',
+          code: 'font-family: "Courier Prime", monospace; font-size: 15px; padding: 2px 6px; background-color: #f9f9f9 !important; color: #c9302c !important; border: 1px solid #e0e0e0;',
+          pre: "margin: 24px 0; padding: 20px; background-color: #f9f9f9 !important; border-left: 4px solid #c9302c; overflow-x: auto; line-height: 1.6 !important;",
+          hr: "margin: 36px auto; border: none; height: 1px; background-color: #c9302c !important; max-width: 100px;",
+          img: "max-width: 100%; max-height: 500px !important; height: auto; display: block; margin: 24px auto; border: 1px solid #e0e0e0;",
+          table: "width: 100%; margin: 24px 0; border-collapse: collapse; font-size: 16px;",
+          th: "background-color: #f9f9f9 !important; padding: 10px 12px; text-align: left; border-top: 2px solid #c9302c; border-bottom: 2px solid #c9302c; font-weight: 700; color: #2c2c2c !important; text-transform: uppercase; letter-spacing: 0.05em; font-size: 14px;",
+          td: "padding: 10px 12px; border-bottom: 1px solid #e0e0e0; color: #2c2c2c !important;",
+          tr: "border-bottom: 1px solid #e0e0e0;",
+        },
+      },
+      "ando-concrete": {
+        name: "安藤·清水",
+        styles: {
+          container: 'max-width: 600px; margin: 0 auto; padding: 20px 24px 50px 24px; font-family: "Helvetica Neue", Arial, sans-serif; font-size: 16px; line-height: 1.85 !important; color: #4a4a4a !important; background-color: #fff !important; word-wrap: break-word;',
+          h1: "font-size: 24px; font-weight: 300; color: #1a1a1a !important; line-height: 1.35 !important; margin: 36px 0 20px; padding-bottom: 16px; border-bottom: 1px solid #d0d0d0; letter-spacing: 0.15em; text-transform: uppercase;",
+          h2: "font-size: 18px; font-weight: 400; color: #2a2a2a !important; line-height: 1.45 !important; margin: 32px 0 16px; padding: 12px 0; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; letter-spacing: 0.1em; background-color: #fafafa !important;",
+          h3: "font-size: 16px; font-weight: 400; color: #3a3a3a !important; line-height: 1.5 !important; margin: 28px 0 14px; letter-spacing: 0.08em;",
+          h4: "font-size: 15px; font-weight: 500; color: #4a4a4a !important; line-height: 1.55 !important; margin: 24px 0 12px; letter-spacing: 0.05em;",
+          h5: "font-size: 14px; font-weight: 500; color: #5a5a5a !important; line-height: 1.55 !important; margin: 20px 0 10px;",
+          h6: "font-size: 13px; font-weight: 500; color: #6a6a6a !important; line-height: 1.55 !important; margin: 18px 0 9px;",
+          p: "margin: 20px 0 !important; line-height: 1.85 !important; color: #4a4a4a !important; text-align: justify;",
+          strong: "font-weight: 600; color: #1a1a1a !important; letter-spacing: 0.05em;",
+          em: "font-style: normal; color: #6a6a6a !important; letter-spacing: 0.05em; font-weight: 300;",
+          a: "color: #4a4a4a !important; text-decoration: none; border-bottom: 1px solid #b0b0b0; padding-bottom: 1px;",
+          ul: "margin: 20px 0; padding-left: 28px; list-style-type: circle;",
+          ol: "margin: 20px 0; padding-left: 28px; list-style-type: decimal;",
+          li: "margin: 10px 0; line-height: 1.85 !important; color: #4a4a4a !important; padding-left: 20px; position: relative;",
+          blockquote: "margin: 20px 0; padding: 14px 20px; background-color: #ffffff !important; border: 1px solid #d0d0d0; color: #3a3a3a !important; font-size: 15px; line-height: 1.7 !important; letter-spacing: 0.03em; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);",
+          code: 'font-family: "Courier New", Courier, monospace; font-size: 14px; padding: 2px 6px; background-color: #f0f0f0 !important; color: #4a4a4a !important; border: 1px solid #d0d0d0;',
+          pre: "margin: 24px 0; padding: 20px; background-color: #2a2a2a !important; color: #f0f0f0 !important; border: none; overflow-x: auto; line-height: 1.6 !important; box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.4);",
+          hr: "margin: 36px auto; border: none; width: 60px; height: 1px; background-color: #c0c0c0 !important;",
+          img: "max-width: 100%; max-height: 450px !important; height: auto; display: block; margin: 24px auto; filter: grayscale(20%); opacity: 0.95;",
+          table: "width: 100%; margin: 24px 0; border-collapse: collapse; font-size: 14px; border: 1px solid #d0d0d0;",
+          th: "background-color: #f8f8f8 !important; padding: 12px; text-align: left; border: 1px solid #d0d0d0; font-weight: 400; color: #2a2a2a !important; letter-spacing: 0.08em; text-transform: uppercase;",
+          td: "padding: 12px; border: 1px solid #e0e0e0; color: #4a4a4a !important; background-color: #fff !important;",
+          tr: "border: 1px solid #e0e0e0;",
+        },
+      },
+      "gaudi-organic": {
+        name: "高迪·有机",
+        styles: {
+          container: 'max-width: 700px; margin: 0 auto; padding: 20px 24px 45px 24px; font-family: "Baskerville", "Georgia", serif; font-size: 17px; line-height: 1.8 !important; color: #3d2914 !important; background-color: #fff5e6 !important; word-wrap: break-word;',
+          h1: "font-size: 32px; font-weight: 700; color: #ff6b6b !important; background: linear-gradient(45deg, #ff6b6b, #ffd93d, #6bcf7f, #4ecdc4, #5b86e5, #a55eea); -webkit-background-clip: text; background-clip: text; line-height: 1.25 !important; margin: 36px 0 18px; text-align: center; letter-spacing: -0.02em; position: relative; padding: 12px;",
+          h2: "font-size: 26px; font-weight: 600; color: #c0392b !important; line-height: 1.3 !important; margin: 32px 0 16px; text-align: center; position: relative; padding: 10px 20px; background: radial-gradient(ellipse at center, rgba(192, 57, 43, 0.08) 0%, transparent 70%); border-radius: 50% 20% / 10% 40%;",
+          h3: "font-size: 21px; font-weight: 600; color: #27ae60 !important; line-height: 1.35 !important; margin: 28px 0 14px; padding-left: 24px; position: relative; border-left: 4px wavy #27ae60;",
+          h4: "font-size: 18px; font-weight: 600; color: #2980b9 !important; line-height: 1.4 !important; margin: 24px 0 12px; padding: 8px 16px; background: linear-gradient(90deg, rgba(41, 128, 185, 0.1) 0%, transparent 50%); border-radius: 100px 0 100px 0;",
+          h5: "font-size: 17px; font-weight: 600; color: #8e44ad !important; line-height: 1.45 !important; margin: 20px 0 10px;",
+          h6: "font-size: 16px; font-weight: 600; color: #d35400 !important; line-height: 1.45 !important; margin: 18px 0 9px; font-style: italic;",
+          p: "margin: 20px 0 !important; line-height: 1.85 !important; color: #3d2914 !important; text-indent: 2em;",
+          strong: "font-weight: 700; color: #c0392b !important; background: linear-gradient(180deg, transparent 60%, rgba(192, 57, 43, 0.2) 60%); padding: 2px 4px;",
+          em: "font-style: italic; color: #27ae60 !important; font-weight: 500;",
+          a: "color: #2980b9 !important; text-decoration: none; border-bottom: 2px wavy #2980b9; position: relative;",
+          ul: "margin: 20px 0; padding-left: 28px; list-style-type: square;",
+          ol: "margin: 20px 0; padding-left: 28px; list-style-type: decimal;",
+          li: "margin: 10px 0; line-height: 1.8 !important; color: #3d2914 !important; padding: 10px 18px 10px 32px; position: relative; background: linear-gradient(90deg, rgba(255, 193, 7, 0.1) 0%, transparent 30%); border-radius: 20px 40px 80px 20px / 80px 20px 40px 20px;",
+          blockquote: "margin: 20px auto; padding: 16px 22px; background: radial-gradient(circle at top left, rgba(255, 107, 107, 0.1) 0%, rgba(109, 207, 127, 0.1) 25%, rgba(78, 205, 196, 0.1) 50%, rgba(91, 134, 229, 0.1) 75%, rgba(165, 94, 234, 0.1) 100%); border: 3px solid transparent; border-image: linear-gradient(45deg, #ff6b6b, #ffd93d, #6bcf7f, #4ecdc4, #5b86e5, #a55eea) 1; border-radius: 50% 20% / 10% 40%; color: #3d2914 !important; font-size: 17px; line-height: 1.6 !important; font-style: italic; text-align: center; max-width: 600px;",
+          code: 'font-family: "Courier New", Courier, monospace; font-size: 15px; padding: 3px 8px; background: linear-gradient(45deg, rgba(255, 107, 107, 0.2), rgba(255, 217, 61, 0.2)); color: #c0392b !important; border-radius: 50% / 30%; font-weight: 600;',
+          pre: "margin: 24px 0; padding: 22px; background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #fda085 100%); color: #fff !important; border-radius: 30% 70% 70% 30% / 60% 40% 60% 40%; overflow-x: auto; line-height: 1.55 !important; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18); position: relative;",
+          hr: "margin: 36px auto; border: none; height: 24px; background: url(\"data:image/svg+xml,%3Csvg width='100' height='30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,15 Q25,0 50,15 T100,15' stroke='%23c0392b' stroke-width='2' fill='none'/%3E%3C/svg%3E\") repeat-x center; background-size: 80px 24px; max-width: 240px;",
+          img: "max-width: 100%; max-height: 500px !important; height: auto; display: block; margin: 24px auto; border-radius: 10px; box-shadow: 0 8px 20px rgba(255, 193, 7, 0.12); border: 2px solid #ffd93d;",
+          table: "width: 100%; margin: 24px 0; border-collapse: separate; border-spacing: 4px; font-size: 15px;",
+          th: "background: linear-gradient(45deg, #ff6b6b 0%, #ffd93d 100%); color: #fff !important; padding: 12px; text-align: left; font-weight: 600; border-radius: 12px 12px 0 0; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);",
+          td: "padding: 10px; background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(109, 207, 127, 0.1) 100%); color: #3d2914 !important; border-radius: 8px;",
+          tr: "border: none;",
+        },
+      },
+      guardian: {
+        name: "Guardian 卫报",
+        styles: {
+          container: 'max-width: 700px; margin: 0 auto; padding: 16px 12px 40px 12px; font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: 17px; line-height: 1.6 !important; color: #121212 !important; background-color: #fff !important; word-wrap: break-word;',
+          h1: "font-size: 42px; font-weight: 700; color: #052962 !important; line-height: 1.15 !important; margin: 40px 0 20px; padding-bottom: 12px; border-bottom: 3px solid #052962;",
+          h2: "font-size: 32px; font-weight: 600; color: #052962 !important; line-height: 1.25 !important; margin: 35px 0 18px; padding-left: 16px; border-left: 5px solid #C70000; background-color: #f6f6f6 !important; padding: 12px 16px;",
+          h3: "font-size: 24px; font-weight: 600; color: #052962 !important; line-height: 1.3 !important; margin: 30px 0 15px; padding: 8px 12px; background-color: #FEC200 !important; display: inline-block;",
+          h4: "font-size: 20px; font-weight: 600; color: #052962 !important; line-height: 1.4 !important; margin: 25px 0 12px; border-left: 3px solid #0084C6; padding-left: 12px;",
+          h5: "font-size: 18px; font-weight: 500; color: #333 !important; line-height: 1.4 !important; margin: 20px 0 10px;",
+          h6: "font-size: 16px; font-weight: 500; color: #666 !important; line-height: 1.4 !important; margin: 18px 0 8px;",
+          p: "margin: 18px 0 !important; line-height: 1.7 !important; color: #121212 !important;",
+          strong: "font-weight: 700; color: #052962 !important; background-color: rgba(5, 41, 98, 0.05) !important; padding: 1px 4px;",
+          em: "font-style: italic; color: #333 !important;",
+          a: "color: #0084C6 !important; text-decoration: none; border-bottom: 1px solid #0084C6;",
+          ul: "margin: 20px 0; padding-left: 24px;",
+          ol: "margin: 20px 0; padding-left: 24px;",
+          li: "margin: 10px 0; line-height: 1.7 !important; color: #121212 !important;",
+          blockquote: "margin: 24px 0; padding: 14px 20px; background-color: #FEC200 !important; border-left: 4px solid #C70000; color: #052962 !important; font-size: 17px; line-height: 1.5 !important; font-weight: 500; position: relative;",
+          code: 'font-family: "SF Mono", Consolas, monospace; font-size: 15px; padding: 3px 6px; background-color: #f6f6f6 !important; color: #C70000 !important; border-radius: 3px;',
+          pre: "margin: 25px 0; padding: 20px; background-color: #052962 !important; color: #fff !important; border-radius: 4px; overflow-x: auto; line-height: 1.5 !important;",
+          hr: "margin: 40px 0; border: none; height: 2px; background-color: #052962 !important;",
+          img: "max-width: 100%; max-height: 600px !important; height: auto; display: block; margin: 30px auto; border: 2px solid #052962;",
+          table: "width: 100%; margin: 25px 0; border-collapse: collapse; font-size: 16px;",
+          th: "background-color: #052962 !important; color: #fff !important; padding: 12px 15px; text-align: left; font-weight: 600; border: 1px solid #052962;",
+          td: "padding: 10px 15px; border: 1px solid #e0e0e0; color: #121212 !important;",
+          tr: "border-bottom: 1px solid #e0e0e0;",
+        },
+      },
+      nikkei: {
+        name: "Nikkei 日经",
+        styles: {
+          container: 'max-width: 650px; margin: 0 auto; padding: 10px 12px 20px 12px; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif; font-size: 15px; line-height: 1.6 !important; color: #1a1a1a !important; background-color: #fff !important; word-wrap: break-word;',
+          h1: "font-size: 24px; font-weight: 700; color: #000 !important; line-height: 1.3 !important; margin: 25px 0 15px; padding-bottom: 8px; border-bottom: 2px solid #000;",
+          h2: "font-size: 18px; font-weight: 700; color: #c41230 !important; line-height: 1.4 !important; margin: 20px 0 12px; padding-left: 10px; border-left: 3px solid #c41230;",
+          h3: "font-size: 16px; font-weight: 600; color: #000 !important; line-height: 1.4 !important; margin: 18px 0 10px; padding: 4px 8px; background-color: #f5f5f5 !important;",
+          h4: "font-size: 15px; font-weight: 600; color: #333 !important; line-height: 1.5 !important; margin: 15px 0 8px; text-decoration: underline; text-decoration-color: #c41230; text-underline-offset: 3px;",
+          h5: "font-size: 14px; font-weight: 600; color: #666 !important; line-height: 1.5 !important; margin: 12px 0 6px;",
+          h6: "font-size: 13px; font-weight: 600; color: #999 !important; line-height: 1.5 !important; margin: 10px 0 5px;",
+          p: "margin: 12px 0 !important; line-height: 1.6 !important; color: #1a1a1a !important; text-align: justify;",
+          strong: "font-weight: 700; color: #000 !important; background-color: #fff3f3 !important; padding: 0 2px;",
+          em: "font-style: normal; color: #c41230 !important; font-weight: 600;",
+          a: "color: #0066cc !important; text-decoration: none; border-bottom: 1px solid #0066cc;",
+          ul: "margin: 15px 0; padding-left: 28px; list-style-type: disc;",
+          ol: "margin: 15px 0; padding-left: 28px; list-style-type: decimal;",
+          li: "margin: 6px 0; line-height: 1.6 !important; color: #1a1a1a !important;",
+          blockquote: "margin: 16px 0; padding: 10px 15px; background-color: transparent !important; border-left: 2px solid #c41230; border-right: 2px solid #c41230; color: #1a1a1a !important; font-size: 14px; line-height: 1.5 !important;",
+          code: 'font-family: "Courier New", monospace; font-size: 13px; padding: 2px 4px; background-color: #f5f5f5 !important; color: #c41230 !important;',
+          pre: "margin: 20px 0; padding: 15px; background-color: #f5f5f5 !important; border: 1px solid #ddd; overflow-x: auto; line-height: 1.4 !important;",
+          hr: "margin: 30px 0; border: none; height: 1px; background-color: #000 !important;",
+          img: "max-width: 100%; max-height: 400px !important; height: auto; display: block; margin: 20px auto; border: 1px solid #ddd;",
+          table: "width: 100%; margin: 20px 0; border-collapse: collapse; font-size: 14px; border: 1px solid #000;",
+          th: "background-color: #c41230 !important; color: #fff !important; padding: 8px 10px; text-align: left; font-weight: 600; border: 1px solid #c41230;",
+          td: "padding: 6px 10px; border: 1px solid #ddd; color: #1a1a1a !important; background-color: #fff !important;",
+          tr: "border-bottom: 1px solid #ddd;",
+        },
+      },
+      "warm-docs": {
+        name: "焦橙文档",
+        styles: {
+          container: 'max-width: 700px; margin: 0 auto; padding: 16px 20px 40px 20px; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif; font-size: 16px; line-height: 1.8 !important; color: #1A1A1A !important; background-color: #FAFAF9 !important; word-wrap: break-word;',
+          h1: "font-size: 28px; font-weight: 700; color: #1A1A1A !important; line-height: 1.3 !important; margin: 36px 0 12px; padding-bottom: 12px; border-bottom: 3px solid #C2410C;",
+          h2: "font-size: 22px; font-weight: 700; color: #1A1A1A !important; line-height: 1.35 !important; margin: 36px 0 14px; padding-top: 16px; border-top: 3px solid #C2410C;",
+          h3: "font-size: 18px; font-weight: 600; color: #1A1A1A !important; line-height: 1.4 !important; margin: 28px 0 12px; padding-left: 14px; border-left: 4px solid #C2410C;",
+          h4: "font-size: 16px; font-weight: 600; color: #C2410C !important; line-height: 1.45 !important; margin: 24px 0 10px;",
+          h5: "font-size: 15px; font-weight: 600; color: #6B6B6B !important; line-height: 1.5 !important; margin: 20px 0 8px;",
+          h6: "font-size: 14px; font-weight: 600; color: #6B6B6B !important; line-height: 1.5 !important; margin: 18px 0 8px;",
+          p: "margin: 18px 0 !important; line-height: 1.8 !important; color: #1A1A1A !important;",
+          strong: "font-weight: 600; color: #C2410C !important;",
+          em: "font-style: italic; color: #6B6B6B !important;",
+          a: "color: #C2410C !important; text-decoration: none; border-bottom: 1px solid #C2410C;",
+          ul: "margin: 18px 0; padding-left: 28px;",
+          ol: "margin: 18px 0; padding-left: 28px;",
+          li: "margin: 8px 0; line-height: 1.8 !important; color: #1A1A1A !important;",
+          blockquote: "margin: 20px 0; padding: 12px 18px; background-color: #FFF7ED !important; border-left: 4px solid #C2410C; color: #1A1A1A !important; font-size: 15px; line-height: 1.7 !important; border-radius: 0 4px 4px 0;",
+          code: 'font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: 14px; padding: 2px 6px; background-color: #F5F5F0 !important; color: #C2410C !important; border-radius: 3px; border: 1px solid #E5E5E5;',
+          pre: "margin: 22px 0; padding: 18px; background-color: #F5F5F0 !important; border: 1px solid #E5E5E5; border-radius: 4px; overflow-x: auto; line-height: 1.6 !important;",
+          hr: "margin: 32px 0; border: none; border-top: 1px solid #E5E5E5;",
+          img: "max-width: 100%; max-height: 500px !important; height: auto; display: block; margin: 22px auto; border-radius: 4px;",
+          table: "width: 100%; margin: 22px 0; border-collapse: collapse; font-size: 15px;",
+          th: "background-color: #F5F5F0 !important; padding: 10px 14px; text-align: left; border: 1px solid #E5E5E5; font-weight: 600; color: #1A1A1A !important;",
+          td: "padding: 10px 14px; border: 1px solid #E5E5E5; color: #1A1A1A !important;",
+          tr: "border-bottom: 1px solid #E5E5E5;",
+        },
+      },
+      lemonde: {
+        name: "Le Monde 世界报",
+        styles: {
+          container: 'max-width: 680px; margin: 0 auto; padding: 20px 20px 45px 20px; font-family: Georgia, "Times New Roman", serif; font-size: 17px; line-height: 1.8 !important; color: #2c2c2c !important; background-color: #fffef9 !important; word-wrap: break-word;',
+          h1: 'font-size: 32px; font-weight: 400; color: #1a1a1a !important; line-height: 1.2 !important; margin: 36px 0 18px; text-align: center; letter-spacing: -0.02em; font-family: "Didot", Georgia, serif; text-transform: uppercase;',
+          h2: 'font-size: 26px; font-weight: 300; color: #2c2c2c !important; line-height: 1.3 !important; margin: 32px 0 16px; text-align: center; padding: 14px 0; border-top: 1px solid #2c2c2c; border-bottom: 1px solid #2c2c2c; font-style: italic;',
+          h3: 'font-size: 21px; font-weight: 400; color: #2c2c2c !important; line-height: 1.35 !important; margin: 28px 0 14px; padding-left: 16px; position: relative; font-style: italic;',
+          h4: "font-size: 16px; font-weight: 400; color: #3a3a3a !important; line-height: 1.4 !important; margin: 24px 0 12px; letter-spacing: 0.1em; text-transform: uppercase;",
+          h5: "font-size: 16px; font-weight: 400; color: #4a4a4a !important; line-height: 1.45 !important; margin: 20px 0 10px; font-style: italic;",
+          h6: "font-size: 15px; font-weight: 400; color: #5a5a5a !important; line-height: 1.45 !important; margin: 18px 0 9px;",
+          p: "margin: 20px 0 !important; line-height: 1.85 !important; color: #2c2c2c !important; text-align: justify; text-indent: 2em;",
+          strong: "font-weight: 600; color: #1a1a1a !important; letter-spacing: 0.05em;",
+          em: "font-style: italic; color: #2c2c2c !important; letter-spacing: 0.02em;",
+          a: "color: #2c2c2c !important; text-decoration: none; border-bottom: 1px dotted #2c2c2c;",
+          ul: "margin: 20px 0; padding-left: 28px; list-style-type: disc;",
+          ol: "margin: 20px 0; padding-left: 28px; list-style-type: decimal;",
+          li: "margin: 10px 0; line-height: 1.8 !important; color: #2c2c2c !important; padding-left: 28px; position: relative;",
+          blockquote: "margin: 20px auto; padding: 16px 26px; background-color: transparent !important; border-top: 1px solid #2c2c2c; border-bottom: 1px solid #2c2c2c; color: #2c2c2c !important; font-size: 17px; line-height: 1.6 !important; font-style: italic; text-align: center; max-width: 500px; font-family: Georgia, serif;",
+          code: 'font-family: "Courier Prime", monospace; font-size: 15px; padding: 2px 6px; background-color: #f9f9f9 !important; color: #2c2c2c !important; border: 1px solid #e0e0e0;',
+          pre: "margin: 24px 0; padding: 20px; background-color: #f9f9f9 !important; border: 1px solid #2c2c2c; overflow-x: auto; line-height: 1.6 !important;",
+          hr: "margin: 36px auto; border: none; text-align: center; height: 20px; background: url(\"data:image/svg+xml,%3Csvg width='80' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='40' y='12' text-anchor='middle' font-size='20' fill='%232c2c2c'%3E⁂%3C/text%3E%3C/svg%3E\") no-repeat center; background-size: 80px 20px;",
+          img: "max-width: 100%; max-height: 500px !important; height: auto; display: block; margin: 24px auto; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; filter: sepia(10%);",
+          table: "width: 100%; margin: 24px 0; border-collapse: collapse; font-size: 15px;",
+          th: "background-color: transparent !important; padding: 10px 12px; text-align: left; border-top: 2px solid #2c2c2c; border-bottom: 1px solid #2c2c2c; font-weight: 600; color: #2c2c2c !important; font-style: italic; text-transform: uppercase; letter-spacing: 0.05em; font-size: 13px;",
+          td: "padding: 10px 12px; border-bottom: 1px solid #e0e0e0; color: #2c2c2c !important;",
+          tr: "border-bottom: 1px solid #e0e0e0;",
+        },
+      },
+    });
+
+    const themes = [
+      {
+        id: "minimal",
+        name: "默认",
+        desc: "通用公众号风格，简洁稳妥。",
+        rawKey: "wechat-default",
+        tags: ["基础", "商务"],
+        accent: "#3b82f6",
+        soft: "#e6f0ff",
+        text: "#1b1f2a",
+        style: {
+          h1: { border: false, bg: false, underline: true },
+          h2: { bar: true, bg: false },
+          h3: { dot: true },
+          blockquote: { bg: "#f1f5ff", border: true },
+          code: { bg: "#111827", text: "#e5e7eb" },
+          pBg: null,
+        },
+      },
+      {
+        id: "clean",
+        name: "优雅",
+        desc: "柔和排版，适合品牌与生活内容。",
+        rawKey: "wechat-elegant",
+        tags: ["生活", "马卡龙"],
+        accent: "#2f8f6b",
+        soft: "#e5f4ec",
+        text: "#1f4d3f",
+        style: {
+          h1: { bar: true, bg: true, bgColor: "#e5f4ec" },
+          h2: { pill: true },
+          h3: { underline: true },
+          blockquote: { bg: "#effaf3", border: true },
+          code: { bg: "#0f3d2e", text: "#e7fff5" },
+          pBg: null,
+        },
+      },
+      {
+        id: "rose",
+        name: "Anthropic Claude",
+        desc: "温暖克制，适合长文与观点表达。",
+        rawKey: "wechat-anthropic",
+        tags: ["文艺", "生活"],
+        accent: "#d9487f",
+        soft: "#ffe2ef",
+        text: "#6b1f3a",
+        style: {
+          h1: { bg: true, bgColor: "#ffe2ef", bar: true },
+          h2: { bar: true, bg: false },
+          h3: { dot: true },
+          blockquote: { bg: "#fff0f6", border: true },
+          code: { bg: "#3b0a1f", text: "#ffe8f1" },
+          pBg: null,
+        },
+      },
+      {
+        id: "cream",
+        name: "金融时报",
+        desc: "金融报刊气质，适合分析解读。",
+        rawKey: "wechat-ft",
+        tags: ["生活", "文艺"],
+        accent: "#e67e22",
+        soft: "#ffeede",
+        text: "#3c2f25",
+        style: {
+          h1: { underline: true },
+          h2: { bar: true, bg: true, bgColor: "#fff3e6" },
+          h3: { underline: true },
+          blockquote: { bg: "#fff7ee", border: true },
+          code: { bg: "#4a2d16", text: "#ffeede" },
+          pBg: "#fffaf4",
+        },
+      },
+      {
+        id: "mono",
+        name: "Jony Ive",
+        desc: "黑白极简，适合理性表达。",
+        rawKey: "wechat-jonyive",
+        tags: ["商务", "黑色系"],
+        accent: "#111827",
+        soft: "#e5e7eb",
+        text: "#111827",
+        style: {
+          h1: { underline: true },
+          h2: { bar: true, bg: false },
+          h3: { underline: true },
+          blockquote: { bg: "#f3f4f6", border: true },
+          code: { bg: "#111827", text: "#e5e7eb" },
+          pBg: null,
+        },
+      },
+      {
+        id: "tech",
+        name: "技术",
+        desc: "技术文章首选，层次清晰。",
+        rawKey: "wechat-tech",
+        tags: ["技术", "教育"],
+        accent: "#60a5fa",
+        soft: "#1f2937",
+        text: "#e5e7eb",
+        dark: true,
+        style: {
+          h1: { gradient: true },
+          h2: { bar: true, bg: false },
+          h3: { dot: true },
+          blockquote: { bg: "#111827", border: true },
+          code: { bg: "#0b1220", text: "#e2e8f0" },
+          pBg: null,
+        },
+      },
+      {
+        id: "purple",
+        name: "优雅紫调",
+        desc: "轻盈柔和，适合活动与审美内容。",
+        tags: ["马卡龙", "文艺"],
+        accent: "#8b5cf6",
+        soft: "#ede9fe",
+        text: "#3b2f5c",
+        style: {
+          h1: { bg: true, bgColor: "#ede9fe" },
+          h2: { bar: true, bg: false },
+          h3: { underline: true },
+          blockquote: { bg: "#f3f1ff", border: true },
+          code: { bg: "#2d1b69", text: "#f5f3ff" },
+          pBg: null,
+        },
+      },
+      {
+        id: "mint",
+        name: "Apple 极简",
+        desc: "干净明亮，适合教程与产品介绍。",
+        rawKey: "wechat-apple",
+        tags: ["教育", "生活"],
+        accent: "#14b8a6",
+        soft: "#e6fffb",
+        text: "#0f766e",
+        style: {
+          h1: { bar: true, bg: true, bgColor: "#e6fffb" },
+          h2: { pill: true },
+          h3: { underline: true },
+          blockquote: { bg: "#effdfb", border: true },
+          code: { bg: "#0f3d3a", text: "#e6fffb" },
+          pBg: null,
+        },
+      },
+      {
+        id: "amber",
+        name: "晚点风格",
+        desc: "强烈红色强调，适合评论与深度报道。",
+        rawKey: "latepost-depth",
+        tags: ["商务", "基础"],
+        accent: "#f97316",
+        soft: "#ffedd5",
+        text: "#7c2d12",
+        style: {
+          h1: { bar: true, bg: true, bgColor: "#ffedd5" },
+          h2: { pill: true },
+          h3: { dot: true },
+          blockquote: { bg: "#fff7ed", border: true },
+          code: { bg: "#3f1c0d", text: "#ffedd5" },
+          pBg: null,
+        },
+      },
+      {
+        id: "navy",
+        name: "深度阅读",
+        desc: "稳重专业，适合深度长文。",
+        rawKey: "wechat-deepread",
+        tags: ["商务", "技术"],
+        accent: "#1d4ed8",
+        soft: "#dbeafe",
+        text: "#1e3a8a",
+        style: {
+          h1: { underline: true },
+          h2: { bar: true, bg: false },
+          h3: { dot: true },
+          blockquote: { bg: "#eef2ff", border: true },
+          code: { bg: "#0b1b3f", text: "#e0e7ff" },
+          pBg: null,
+        },
+      },
+      {
+        id: "forest",
+        name: "Medium 长文",
+        desc: "自然阅读感，适合叙事长文。",
+        rawKey: "wechat-medium",
+        tags: ["生活", "文艺"],
+        accent: "#15803d",
+        soft: "#dcfce7",
+        text: "#14532d",
+        style: {
+          h1: { bar: true, bg: true, bgColor: "#dcfce7" },
+          h2: { underline: true },
+          h3: { dot: true },
+          blockquote: { bg: "#f0fdf4", border: true },
+          code: { bg: "#0f2a1a", text: "#dcfce7" },
+          pBg: null,
+        },
+      },
+      {
+        id: "sunset",
+        name: "纽约时报",
+        desc: "报刊感更强，适合评论与专栏。",
+        rawKey: "wechat-nyt",
+        tags: ["生活", "马卡龙"],
+        accent: "#fb7185",
+        soft: "#ffe4e6",
+        text: "#9f1239",
+        style: {
+          h1: { bg: true, bgColor: "#ffe4e6" },
+          h2: { bar: true, bg: false },
+          h3: { underline: true },
+          blockquote: { bg: "#fff1f2", border: true },
+          code: { bg: "#4a0f1e", text: "#ffe4e6" },
+          pBg: null,
+        },
+      },
+      {
+        id: "emptiness",
+        name: "原研哉·空",
+        desc: "大留白和极简秩序，适合审美与品牌叙事。",
+        rawKey: "kenya-emptiness",
+        tags: ["文艺", "生活"],
+        accent: "#a3a3a3",
+        soft: "#f6f6f6",
+        text: "#666666",
+        style: { h1: { underline: false }, h2: { bar: false }, h3: { underline: false }, blockquote: { bg: "#ffffff", border: false }, code: { bg: "#f5f5f5", text: "#666666" }, pBg: null },
+      },
+      {
+        id: "editorial",
+        name: "Hische·编辑部",
+        desc: "编辑部杂志感，更强调版式与红黑对比。",
+        rawKey: "hische-editorial",
+        tags: ["文艺", "商务"],
+        accent: "#c9302c",
+        soft: "#fff4f2",
+        text: "#2c2c2c",
+        style: { h1: { underline: true }, h2: { bg: true, bgColor: "#fff7f5" }, h3: { underline: false }, blockquote: { bg: "#fffef9", border: false }, code: { bg: "#f9f9f9", text: "#c9302c" }, pBg: null },
+      },
+      {
+        id: "concrete",
+        name: "安藤·清水",
+        desc: "混凝土质感的克制排版，适合建筑与思考类内容。",
+        rawKey: "ando-concrete",
+        tags: ["商务", "黑色系"],
+        accent: "#7a7a7a",
+        soft: "#f3f3f3",
+        text: "#4a4a4a",
+        style: { h1: { underline: true }, h2: { bg: true, bgColor: "#fafafa" }, h3: { underline: false }, blockquote: { bg: "#ffffff", border: true }, code: { bg: "#f0f0f0", text: "#4a4a4a" }, pBg: null },
+      },
+      {
+        id: "organic",
+        name: "高迪·有机",
+        desc: "色彩和曲线更大胆，适合创意内容展示。",
+        rawKey: "gaudi-organic",
+        tags: ["文艺", "马卡龙"],
+        accent: "#ff6b6b",
+        soft: "#fff5e6",
+        text: "#3d2914",
+        style: { h1: { gradient: true }, h2: { bg: true, bgColor: "#fff7ef" }, h3: { bar: true }, blockquote: { bg: "#fff2df", border: true }, code: { bg: "#ffecc6", text: "#c0392b" }, pBg: null },
+      },
+      {
+        id: "guardian",
+        name: "Guardian 卫报",
+        desc: "高对比新闻感，适合时评与报道。",
+        rawKey: "guardian",
+        tags: ["商务", "技术"],
+        accent: "#052962",
+        soft: "#f3f6fb",
+        text: "#121212",
+        style: { h1: { underline: true }, h2: { bar: true, bg: true, bgColor: "#f6f6f6" }, h3: { bg: true, bgColor: "#FEC200" }, blockquote: { bg: "#FEC200", border: true }, code: { bg: "#f6f6f6", text: "#C70000" }, pBg: null },
+      },
+      {
+        id: "nikkei",
+        name: "Nikkei 日经",
+        desc: "紧凑财经资讯风，适合信息密度更高的文章。",
+        rawKey: "nikkei",
+        tags: ["商务", "教育"],
+        accent: "#c41230",
+        soft: "#fff4f4",
+        text: "#1a1a1a",
+        style: { h1: { underline: true }, h2: { bar: true }, h3: { bg: true, bgColor: "#f5f5f5" }, blockquote: { bg: "#ffffff", border: true }, code: { bg: "#f5f5f5", text: "#c41230" }, pBg: null },
+      },
+      {
+        id: "warm-docs",
+        name: "焦橙文档",
+        desc: "更温和的文档风，适合教程与说明型内容。",
+        rawKey: "warm-docs",
+        tags: ["教育", "生活"],
+        accent: "#C2410C",
+        soft: "#FFF7ED",
+        text: "#1A1A1A",
+        style: { h1: { underline: true }, h2: { underline: true }, h3: { bar: true }, blockquote: { bg: "#FFF7ED", border: true }, code: { bg: "#F5F5F0", text: "#C2410C" }, pBg: null },
+      },
+      {
+        id: "lemonde",
+        name: "Le Monde 世界报",
+        desc: "法式报刊排版，适合专栏和深度评论。",
+        rawKey: "lemonde",
+        tags: ["文艺", "商务"],
+        accent: "#2c2c2c",
+        soft: "#fffef9",
+        text: "#2c2c2c",
+        style: { h1: { underline: false }, h2: { underline: true }, h3: { bar: true }, blockquote: { bg: "#fffef9", border: false }, code: { bg: "#f9f9f9", text: "#2c2c2c" }, pBg: null },
+      },
+      {
+        id: "wired",
+        name: "Wired 连线",
+        desc: "高对比数字媒体风，适合科技趋势。",
+        tags: ["技术", "黑色系"],
+        accent: "#22d3ee",
+        soft: "#0f172a",
+        text: "#e2e8f0",
+        dark: true,
+        style: {
+          h1: { gradient: true },
+          h2: { bg: true, bgColor: "#22d3ee" },
+          h3: { dot: true },
+          blockquote: { bg: "#111827", border: true },
+          code: { bg: "#020617", text: "#bae6fd" },
+          pBg: null,
+        },
+      },
+      {
+        id: "ai-coder",
+        name: "AI Coder 特调",
+        desc: "终端感更强，适合工程实践内容。",
+        tags: ["技术", "黑色系"],
+        accent: "#34d399",
+        soft: "#10211b",
+        text: "#d1fae5",
+        dark: true,
+        style: {
+          h1: { bar: true, bg: false },
+          h2: { underline: true },
+          h3: { dot: true },
+          blockquote: { bg: "#0b1512", border: true },
+          code: { bg: "#020617", text: "#bfdbfe" },
+          pBg: null,
+        },
+      },
+    ];
+
+    let currentTheme = themes[0];
+    let currentFilter = "全部";
+    let customStyle = { fontSize: 16, lineHeight: 1.8, align: "left", accent: currentTheme.accent };
+
+    const sample = `# 标题示例\n\n用这套编辑器快速排版你的内容。\n\n## 为什么好用\n- 多主题切换\n- 一键排版\n- 实时预览\n\n> 支持引用、代码块、列表等常见语法。\n\n\`\`\`js\nconsole.log('Hello Markdown');\n\`\`\``;
+
+    const savedMode = localStorage.getItem("md-editor-mode");
+    if (!htmlContent) {
+      htmlContent = marked.parse(sample);
+    }
+    editor.value = htmlContent;
+    editorRich.innerHTML = htmlContent;
+    if (savedMode) {
+      setTimeout(() => setEditorMode(savedMode), 0);
+    }
+
+    function renderFilters() {
+      filterGroup.innerHTML = filters
+        .map((f) => `<button class="chip ${f === currentFilter ? "active" : ""}" data-filter="${f}">${f}</button>`)
+        .join("");
+
+      filterGroup.querySelectorAll(".chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          currentFilter = chip.dataset.filter;
+          renderFilters();
+          renderThemes();
+        });
+      });
+    }
+
+    function renderThemes() {
+      const query = searchInput.value.trim();
+      const list = themes.filter((t) => {
+        const buckets = themeFilterMap[t.id] || [];
+        const matchFilter = currentFilter === "全部" || buckets.includes(currentFilter);
+        const matchSearch = !query || t.name.includes(query) || t.desc.includes(query);
+        return matchFilter && matchSearch;
+      });
+      if (themeSummary) {
+        themeSummary.textContent = query || currentFilter !== "全部"
+          ? `${list.length} / ${themes.length} 套主题`
+          : `${themes.length} 套主题`;
+      }
+
+      themeList.innerHTML = list
+        .map(
+          (t) => `
+          <div class="theme-card ${t.id === currentTheme.id ? "active" : ""}" data-theme="${t.id}">
+            <div class="theme-meta">
+              <strong>${t.name}</strong>
+              <span>${(themeFilterMap[t.id] || ["推荐"])[0]}</span>
+            </div>
+            <div class="theme-sample ${getHuashengThemeStyle(t) ? "theme-sample-raw" : ""}" style="${buildThemeCardSampleStyle(t)}">
+              ${buildThemeCardSampleMarkup(t)}
+            </div>
+            <div class="theme-desc">${t.desc}</div>
+          </div>
+        `,
+        )
+        .join("");
+
+      themeList.querySelectorAll(".theme-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          const id = card.dataset.theme;
+          const theme = themes.find((t) => t.id === id);
+          if (!theme) return;
+          currentTheme = theme;
+          customStyle.accent = theme.accent;
+          renderThemes();
+          applyTheme(theme);
+          updatePreview();
+        });
+      });
+    }
+
+    function getHuashengThemeStyle(theme) {
+      return theme?.rawKey ? HUASHENG_RAW_STYLES[theme.rawKey]?.styles || null : null;
+    }
+
+    function normalizeCardContainerStyle(styleText = "") {
+      return styleText
+        .replace(/max-width:\s*[^;]+;?/gi, "max-width:none;")
+        .replace(/margin:\s*[^;]+;?/gi, "margin:0;")
+        .replace(/padding:\s*[^;]+;?/gi, "padding:16px;")
+        .trim();
+    }
+
+    function buildThemeCardSampleStyle(theme) {
+      const raw = getHuashengThemeStyle(theme);
+      if (raw) {
+        return [
+          normalizeCardContainerStyle(raw.container),
+          "min-height: 220px",
+          "overflow: hidden",
+          "border-radius: 20px",
+          "box-shadow: 0 20px 44px rgba(15, 23, 42, 0.12)",
+        ].join("; ");
+      }
+      const preset = getThemePreset(theme);
+      return [
+        `background:${preset.previewBg}`,
+        `color:${theme.text}`,
+        `font-family:${preset.bodyFont}`,
+        `box-shadow:${preset.imageShadow}`,
+      ].join("; ");
+    }
+
+    function buildThemeCardSampleMarkup(theme) {
+      const raw = getHuashengThemeStyle(theme);
+      if (raw) {
+        const sampleSource = `
+          <div>
+            <h2>二级标题示例</h2>
+            <p>这是一段正文示例，用于感受层级、字重和节奏。</p>
+            <blockquote>引用块示例，快速看出主题气质。</blockquote>
+          </div>
+        `;
+        return `<div class="theme-sample-render">${applyHuashengInlineStyles(sampleSource, theme)}</div>`;
+      }
+      return `
+        <div class="sample-meta" style="${buildThemeCardMetaStyle(theme)}">Theme</div>
+        <h4 style="${buildThemeCardHeadingStyle(theme)}">二级标题示例</h4>
+        <p style="${buildThemeCardParagraphStyle(theme)}">这是一段正文示例，用于感受层级、字重和节奏。</p>
+        <div class="sample-quote" style="${buildThemeCardQuoteStyle(theme)}">引用块示例，快速看出主题气质。</div>
+      `;
+    }
+
+    function buildThemeCardMetaStyle(theme) {
+      const raw = getHuashengThemeStyle(theme);
+      if (raw) {
+        return [
+          "display:inline-flex",
+          "align-items:center",
+          "gap:6px",
+          "padding:4px 10px",
+          "border-radius:999px",
+          "font-size:11px",
+          "font-weight:700",
+          "letter-spacing:0.08em",
+          "text-transform:uppercase",
+          "background:rgba(255,255,255,0.72)",
+          "backdrop-filter:blur(10px)",
+          "color:#4b5563",
+          "border:1px solid rgba(148,163,184,0.18)",
+        ].join("; ");
+      }
+      return [
+        `background:${theme.soft}`,
+        `color:${theme.accent}`,
+        `border:1px solid ${theme.accent}22`,
+      ].join("; ");
+    }
+
+    function buildThemeCardHeadingStyle(theme) {
+      const raw = getHuashengThemeStyle(theme);
+      if (raw) return raw.h2 || raw.h3 || raw.h1 || "";
+      const preset = getThemePreset(theme);
+      const headingStyles = [
+        `color:${theme.accent}`,
+        `font-family:${preset.titleFont}`,
+        `letter-spacing:${preset.h1Spacing}`,
+      ];
+      if (theme.style?.h2?.bar) {
+        headingStyles.push(`border-left:4px solid ${theme.accent}`, "padding-left:8px");
+      }
+      if (theme.style?.h2?.bg || theme.style?.h2?.pill) {
+        headingStyles.push(
+          `background:${theme.style.h2.bgColor || theme.soft}`,
+          "display:inline-block",
+          "padding:6px 10px",
+          `border-radius:${theme.style.h2.pill ? "999px" : "10px"}`,
+        );
+      }
+      return headingStyles.join("; ");
+    }
+
+    function buildThemeCardParagraphStyle(theme) {
+      const raw = getHuashengThemeStyle(theme);
+      if (raw) return raw.p || "";
+      const preset = getThemePreset(theme);
+      return [
+        `color:${theme.text}`,
+        `font-family:${preset.bodyFont}`,
+      ].join("; ");
+    }
+
+    function buildThemeCardQuoteStyle(theme) {
+      const raw = getHuashengThemeStyle(theme);
+      if (raw) return raw.blockquote || "";
+      const preset = getThemePreset(theme);
+      return [
+        `background:${preset.quoteBg || theme.soft}`,
+        `color:${theme.text}`,
+        `border-left-color:${theme.accent}`,
+      ].join("; ");
+    }
+
+    function applyTheme(theme) {
+      preview.style.setProperty("--accent", customStyle.accent || theme.accent);
+      preview.style.setProperty("--accent-soft", theme.soft);
+      preview.style.setProperty("--ink", theme.text);
+      const raw = getHuashengThemeStyle(theme);
+      if (raw) {
+        const containerBgMatch = /background-color:\s*([^;]+);?/i.exec(raw.container || "");
+        preview.style.background = "linear-gradient(180deg, #f8f6f0 0%, #f1eee7 100%)";
+        preview.style.color = theme.text;
+        preview.style.fontFamily = "";
+        preview.dataset.rawTheme = "true";
+        if (containerBgMatch?.[1]) {
+          preview.style.setProperty("--preview-stage-bg", containerBgMatch[1].trim());
+        }
+        return;
+      }
+      preview.dataset.rawTheme = "false";
+      const preset = getThemePreset(theme);
+      preview.style.background = preset.previewBg;
+      preview.style.color = theme.text;
+      preview.style.fontFamily = preset.bodyFont;
+    }
+
+    function updatePreview() {
+      const wasFocused =
+        document.activeElement === editor ||
+        document.activeElement === editorRich;
+      const prevRatio = preview.scrollTop / (preview.scrollHeight - preview.clientHeight || 1);
+
+      preview.innerHTML = buildWeChatHtml();
+      wrapPreviewTables(preview);
+      if (preview.dataset.rawTheme === "true") {
+        preview.style.fontSize = "";
+        preview.style.lineHeight = "";
+        preview.style.textAlign = "";
+      } else {
+        preview.style.fontSize = customStyle.fontSize + "px";
+        preview.style.lineHeight = customStyle.lineHeight;
+        preview.style.textAlign = customStyle.align;
+      }
+      updateStats();
+      localStorage.setItem("md-editor-html", htmlContent);
+      updateStatusBadge("已自动保存");
+
+      if (wasFocused) {
+        syncPreviewToCursor();
+      } else {
+        const max = preview.scrollHeight - preview.clientHeight;
+        preview.scrollTop = max * prevRatio;
+      }
+    }
+
+    function wrapPreviewTables(root) {
+      root.querySelectorAll("table").forEach((table) => {
+        if (table.parentElement?.classList.contains("table-scroll")) return;
+        const wrapper = document.createElement("div");
+        wrapper.className = "table-scroll";
+        table.parentNode.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+      });
+    }
+
+    function updateStats() {
+      const source = editorMode === "rich" ? editorRich.innerText : htmlContent;
+      const text = (source || "").replace(/\\s+/g, " ").trim();
+      const count = text.length;
+      const minutes = count ? Math.max(1, Math.round(count / 400)) : 0;
+      editorStats.textContent = `${count} 字 · ${minutes} 分钟阅读`;
+    }
+
+    function getCursorRatio() {
+      if (editorMode === "rich") {
+        const max = editorRich.scrollHeight - editorRich.clientHeight || 1;
+        return Math.min(1, Math.max(0, editorRich.scrollTop / max));
+      }
+      const total = editor.value.length || 1;
+      return Math.min(1, Math.max(0, editor.selectionStart / total));
+    }
+
+    function syncPreviewToCursor() {
+      const ratio = getCursorRatio();
+      const max = preview.scrollHeight - preview.clientHeight;
+      preview.scrollTop = max * ratio;
+    }
+
+    let isSyncing = false;
+    function syncScroll(fromEditor) {
+      if (isSyncing) return;
+      isSyncing = true;
+      const left = editorMode === "rich" ? editorRich : editor;
+      const right = preview;
+      if (fromEditor) {
+        const leftRatio = left.scrollTop / (left.scrollHeight - left.clientHeight || 1);
+        const rightMax = right.scrollHeight - right.clientHeight;
+        right.scrollTop = rightMax * leftRatio;
+      } else {
+        const rightRatio = right.scrollTop / (right.scrollHeight - right.clientHeight || 1);
+        const leftMax = left.scrollHeight - left.clientHeight;
+        left.scrollTop = leftMax * rightRatio;
+      }
+      requestAnimationFrame(() => {
+        isSyncing = false;
+      });
+    }
+
+    function applyInline(tag) {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const text = editor.value;
+      const selected = text.slice(start, end);
+      const wrap = tag.replace("{text}", selected || "");
+      editor.value = text.slice(0, start) + wrap + text.slice(end);
+      editor.focus();
+      updatePreview();
+    }
+
+    function insertHtmlAtCursor(html) {
+      if (editorMode === "html") {
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        editor.value = editor.value.slice(0, start) + html + editor.value.slice(end);
+        editor.focus();
+        updatePreview();
+        return;
+      }
+      editorRich.focus();
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) {
+        editorRich.insertAdjacentHTML("beforeend", html);
+        updatePreview();
+        return;
+      }
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      const temp = document.createElement("div");
+      temp.innerHTML = html;
+      const frag = document.createDocumentFragment();
+      while (temp.firstChild) {
+        frag.appendChild(temp.firstChild);
+      }
+      range.insertNode(frag);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      updatePreview();
+    }
+
+    function setEditorMode(mode) {
+      editorMode = mode === "html" || mode === "rich" ? mode : "rich";
+      localStorage.setItem("md-editor-mode", mode);
+      modeRich.classList.toggle("active", mode === "rich");
+      modeHtml.classList.toggle("active", mode === "html");
+      editor.style.display = mode === "html" ? "block" : "none";
+      editorRich.style.display = mode === "rich" ? "block" : "none";
+      if (mode === "html") editor.value = htmlContent;
+      if (mode === "rich" && !editorRich.innerHTML.trim() && htmlContent) {
+        editorRich.innerHTML = htmlContent;
+      }
+      if (editorModeHint) {
+        editorModeHint.textContent = mode === "rich" ? "富文本编辑，可切换 HTML 源码" : "当前：HTML 源码编辑";
+      }
+      updatePreview();
+    }
+
+    modeRich?.addEventListener("click", () => setEditorMode("rich"));
+    modeHtml?.addEventListener("click", () => setEditorMode("html"));
+
+    editorRich.addEventListener("click", () => {
+      if (editorMode !== "rich") setEditorMode("rich");
+    });
+
+    editor.addEventListener("paste", (e) => {
+      const html = e.clipboardData?.getData("text/html");
+      if (html) {
+        e.preventDefault();
+        const cleaned = sanitizePastedHtml(html);
+        htmlContent = cleaned;
+        editorRich.innerHTML = cleaned;
+        setEditorMode("rich");
+        editorRich.focus();
+        updatePreview();
+        return;
+      }
+      const text = e.clipboardData?.getData("text/plain");
+      if (text) {
+        e.preventDefault();
+        htmlContent = marked.parse(text);
+        editorRich.innerHTML = htmlContent;
+        setEditorMode("rich");
+        editorRich.focus();
+        updatePreview();
+      }
+    });
+
+    editorRich.addEventListener("paste", (e) => {
+      const html = e.clipboardData?.getData("text/html");
+      if (html) {
+        e.preventDefault();
+        const cleaned = sanitizePastedHtml(html);
+        insertHtmlAtCursor(cleaned);
+        htmlContent = editorRich.innerHTML || cleaned;
+        updatePreview();
+      }
+    });
+
+    document.querySelectorAll("[data-action]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const action = btn.dataset.action;
+        if (editorMode === "rich") {
+          if (action === "h1") return insertHtmlAtCursor("<h1>标题</h1>");
+          if (action === "h2") return insertHtmlAtCursor("<h2>标题</h2>");
+          if (action === "h3") return insertHtmlAtCursor("<h3>标题</h3>");
+          if (action === "bold") return insertHtmlAtCursor("<strong>加粗</strong>");
+          if (action === "italic") return insertHtmlAtCursor("<em>斜体</em>");
+          if (action === "underline") return insertHtmlAtCursor("<u>下划线</u>");
+          if (action === "strike") return insertHtmlAtCursor("<s>删除线</s>");
+          if (action === "quote") return insertHtmlAtCursor("<blockquote>引用内容</blockquote>");
+          if (action === "ul") return insertHtmlAtCursor("<ul>\n  <li>列表项</li>\n</ul>");
+          if (action === "ol") return insertHtmlAtCursor("<ol>\n  <li>列表项</li>\n</ol>");
+          if (action === "hr") return insertHtmlAtCursor("<hr />");
+          if (action === "code") return insertHtmlAtCursor("<pre><code>代码</code></pre>");
+          if (action === "check") return insertHtmlAtCursor("<ul>\n  <li><input type=\"checkbox\" /> 待办</li>\n</ul>");
+          if (action === "table")
+            return insertHtmlAtCursor("<table>\n  <tr><th>标题</th><th>内容</th></tr>\n  <tr><td>示例</td><td>内容</td></tr>\n</table>");
+          if (action === "link") return insertHtmlAtCursor("<a href=\"https://\">链接</a>");
+          if (action === "img") return insertHtmlAtCursor("<img src=\"https://\" alt=\"图片\" />");
+          return;
+        }
+        if (editorMode === "html") {
+          if (action === "h1") return insertHtmlAtCursor("<h1>标题</h1>");
+          if (action === "h2") return insertHtmlAtCursor("<h2>标题</h2>");
+          if (action === "h3") return insertHtmlAtCursor("<h3>标题</h3>");
+          if (action === "bold") return insertHtmlAtCursor("<strong>加粗</strong>");
+          if (action === "italic") return insertHtmlAtCursor("<em>斜体</em>");
+          if (action === "underline") return insertHtmlAtCursor("<u>下划线</u>");
+          if (action === "strike") return insertHtmlAtCursor("<s>删除线</s>");
+          if (action === "quote") return insertHtmlAtCursor("<blockquote>引用内容</blockquote>");
+          if (action === "ul") return insertHtmlAtCursor("<ul>\n  <li>列表项</li>\n</ul>");
+          if (action === "ol") return insertHtmlAtCursor("<ol>\n  <li>列表项</li>\n</ol>");
+          if (action === "hr") return insertHtmlAtCursor("<hr />");
+          if (action === "code") return insertHtmlAtCursor("<pre><code>代码</code></pre>");
+          if (action === "check") return insertHtmlAtCursor("<ul>\n  <li><input type=\"checkbox\" /> 待办</li>\n</ul>");
+          if (action === "table")
+            return insertHtmlAtCursor("<table>\n  <tr><th>标题</th><th>内容</th></tr>\n  <tr><td>示例</td><td>内容</td></tr>\n</table>");
+          if (action === "link") return insertHtmlAtCursor("<a href=\"https://\">链接</a>");
+          if (action === "img") return insertHtmlAtCursor("<img src=\"https://\" alt=\"图片\" />");
+          return;
+        }
+        return;
+      });
+    });
+
+    function insertLinePrefix(prefix) {
+      const start = editor.selectionStart;
+      const text = editor.value;
+      const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+      editor.value = text.slice(0, lineStart) + prefix + text.slice(lineStart);
+      editor.focus();
+      updatePreview();
+    }
+
+    function insertAtCursor(text) {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      editor.value = editor.value.slice(0, start) + text + editor.value.slice(end);
+      editor.focus();
+      updatePreview();
+    }
+
+    function buildWeChatHtml() {
+      const wrapper = document.createElement("div");
+      const content = editorMode === "rich" ? editorRich.innerHTML || "" : htmlContent || "";
+      wrapper.innerHTML = content;
+      // Inline <style> rules from rich paste (e.g., Feishu) before theme styling
+      inlineStylesFromStyleTags(wrapper, { applyTagSelectors: false });
+      if (getHuashengThemeStyle(currentTheme)) {
+        return applyHuashengInlineStyles(wrapper.innerHTML, currentTheme);
+      }
+      // Apply theme inline styles to match preview when copying
+      applyInlineStyles(wrapper, currentTheme, editorMode === "rich");
+      return wrapper.innerHTML;
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function applyInlineStyles(root, theme, preserveSourceStyles = false) {
+      const preset = getThemePreset(theme);
+      const baseFont = preset.bodyFont;
+      const titleFont = preset.titleFont;
+      const fontSize = customStyle.fontSize || 16;
+      const lineHeight = customStyle.lineHeight || 1.8;
+      const accent = customStyle.accent || theme.accent;
+      const styles = theme.style || {};
+
+      const setIfEmpty = (el, prop, value) => {
+        if (!preserveSourceStyles) {
+          el.style[prop] = value;
+          return;
+        }
+        if (!el.style[prop]) el.style[prop] = value;
+      };
+
+      function applyHeadingStyle(el, level, cfg) {
+        const size =
+          level === 1 ? preset.h1Size : level === 2 ? preset.h2Size : preset.h3Size;
+        setIfEmpty(el, "fontSize", size + "px");
+        setIfEmpty(
+          el,
+          "margin",
+          level === 1 ? preset.h1Margin : level === 2 ? preset.h2Margin : preset.h3Margin,
+        );
+        setIfEmpty(el, "textAlign", customStyle.align);
+        setIfEmpty(el, "color", accent);
+        setIfEmpty(el, "fontFamily", titleFont);
+        setIfEmpty(el, "fontWeight", level === 1 ? preset.h1Weight : preset.hxWeight);
+        setIfEmpty(el, "letterSpacing", level === 1 ? preset.h1Spacing : preset.hxSpacing);
+        if (preset.uppercaseHeadings && level <= 2) {
+          setIfEmpty(el, "textTransform", "uppercase");
+        }
+
+        if (!cfg) return;
+
+        if (cfg.gradient) {
+          if (!preserveSourceStyles || !el.style.backgroundImage) {
+            el.style.backgroundImage = `linear-gradient(90deg, ${accent}, ${theme.soft})`;
+            el.style.color = "#ffffff";
+            el.style.padding = "6px 12px";
+            el.style.borderRadius = "10px";
+            el.style.display = "inline-block";
+          }
+        }
+
+        if (cfg.bg) {
+          if (!preserveSourceStyles || !el.style.background) {
+            el.style.background = cfg.bgColor || theme.soft;
+            el.style.padding = "6px 10px";
+            el.style.borderRadius = "8px";
+            el.style.display = "inline-block";
+          }
+        }
+
+        if (cfg.pill) {
+          if (!preserveSourceStyles || !el.style.borderRadius) {
+            el.style.background = theme.soft;
+            el.style.padding = "6px 12px";
+            el.style.borderRadius = "999px";
+            el.style.display = "inline-block";
+            el.style.border = `1px solid ${accent}`;
+          }
+        }
+
+        if (cfg.bar) {
+          if (!preserveSourceStyles || !el.style.borderLeft) {
+            el.style.borderLeft = `6px solid ${accent}`;
+            el.style.paddingLeft = "10px";
+          }
+        }
+
+        if (cfg.underline) {
+          if (!preserveSourceStyles || !el.style.borderBottom) {
+            el.style.borderBottom = `2px solid ${accent}`;
+            el.style.paddingBottom = "6px";
+            el.style.display = "inline-block";
+          }
+        }
+
+        if (cfg.dot) {
+          if (cfg.gradient || cfg.bg || cfg.pill) {
+            if (!preserveSourceStyles || !el.style.borderLeft) {
+              el.style.borderLeft = `6px solid ${accent}`;
+              el.style.paddingLeft = "10px";
+            }
+          } else {
+            if (!preserveSourceStyles || !el.style.backgroundImage) {
+              el.style.backgroundImage = `radial-gradient(circle at 6px 50%, ${accent} 0 4px, transparent 5px)`;
+              el.style.backgroundRepeat = "no-repeat";
+              el.style.backgroundSize = "12px 12px";
+              el.style.backgroundPosition = "0 50%";
+              el.style.paddingLeft = "16px";
+            }
+          }
+        }
+      }
+
+      root.querySelectorAll("p").forEach((el) => {
+        setIfEmpty(el, "margin", preset.pMargin);
+        setIfEmpty(el, "fontSize", fontSize + "px");
+        setIfEmpty(el, "lineHeight", String(lineHeight));
+        setIfEmpty(el, "textAlign", customStyle.align);
+        setIfEmpty(el, "color", theme.text);
+        setIfEmpty(el, "fontFamily", baseFont);
+        if (styles.pBg) {
+          if (!preserveSourceStyles || !el.style.background) {
+            el.style.background = styles.pBg;
+            el.style.padding = "8px 10px";
+            el.style.borderRadius = "8px";
+          }
+        }
+      });
+
+      root.querySelectorAll("h1").forEach((el) => applyHeadingStyle(el, 1, styles.h1));
+      root.querySelectorAll("h2").forEach((el) => applyHeadingStyle(el, 2, styles.h2));
+      root.querySelectorAll("h3").forEach((el) => applyHeadingStyle(el, 3, styles.h3));
+
+      root.querySelectorAll("blockquote").forEach((el) => {
+        const quote = styles.blockquote || {};
+        setIfEmpty(el, "margin", preset.quoteMargin);
+        setIfEmpty(el, "padding", preset.quotePadding);
+        setIfEmpty(el, "borderLeft", quote.border === false ? "0" : preset.quoteBorder || `4px solid ${accent}`);
+        setIfEmpty(el, "background", quote.bg || preset.quoteBg || theme.soft);
+        setIfEmpty(el, "borderRadius", preset.quoteRadius);
+        setIfEmpty(el, "color", theme.text);
+        setIfEmpty(el, "fontStyle", preset.quoteItalic ? "italic" : "normal");
+      });
+
+      root.querySelectorAll("ul, ol").forEach((el) => {
+        setIfEmpty(el, "paddingLeft", "1.2em");
+        setIfEmpty(el, "margin", "0.8em 0");
+      });
+
+      root.querySelectorAll("li").forEach((el) => {
+        setIfEmpty(el, "margin", "0.3em 0");
+        setIfEmpty(el, "color", theme.text);
+        setIfEmpty(el, "fontFamily", baseFont);
+      });
+
+      root.querySelectorAll("a").forEach((el) => {
+        setIfEmpty(el, "color", accent);
+        setIfEmpty(el, "textDecoration", "underline");
+      });
+
+      root.querySelectorAll("pre").forEach((el) => {
+        const code = styles.code || {};
+        setIfEmpty(el, "background", code.bg || (theme.dark ? "#0b1220" : "#111827"));
+        setIfEmpty(el, "color", code.text || "#e5e7eb");
+        setIfEmpty(el, "padding", preset.codePadding);
+        setIfEmpty(el, "borderRadius", preset.codeRadius);
+        setIfEmpty(el, "overflow", "auto");
+        setIfEmpty(el, "fontSize", preset.codeFontSize);
+        setIfEmpty(el, "border", preset.codeBorder);
+      });
+
+      root.querySelectorAll("code").forEach((el) => {
+        if (el.parentElement && el.parentElement.tagName.toLowerCase() === "pre") return;
+        const code = styles.code || {};
+        setIfEmpty(el, "background", code.bg ? code.bg : "rgba(0,0,0,0.06)");
+        setIfEmpty(el, "color", code.text || theme.text);
+        setIfEmpty(el, "padding", "2px 6px");
+        setIfEmpty(el, "borderRadius", "6px");
+        setIfEmpty(el, "fontSize", "12px");
+        setIfEmpty(el, "fontFamily", preset.codeFontFamily);
+      });
+
+      root.querySelectorAll("hr").forEach((el) => {
+        setIfEmpty(el, "border", "0");
+        setIfEmpty(el, "borderTop", `1px dashed ${theme.soft}`);
+        setIfEmpty(el, "margin", "1.2em 0");
+      });
+
+      root.querySelectorAll("table").forEach((el) => {
+        setIfEmpty(el, "width", "100%");
+        setIfEmpty(el, "borderCollapse", "collapse");
+        setIfEmpty(el, "margin", "0.8em 0");
+        setIfEmpty(el, "fontSize", "14px");
+        setIfEmpty(el, "background", preset.tableBg);
+        setIfEmpty(el, "overflow", "hidden");
+        setIfEmpty(el, "borderRadius", preset.tableRadius);
+      });
+
+      root.querySelectorAll("th, td").forEach((el) => {
+        setIfEmpty(el, "border", `1px solid ${theme.soft}`);
+        setIfEmpty(el, "padding", "8px 10px");
+      });
+
+      root.querySelectorAll("th").forEach((el) => {
+        setIfEmpty(el, "background", preset.tableHeadBg || theme.soft);
+        setIfEmpty(el, "color", theme.text);
+        setIfEmpty(el, "fontWeight", "700");
+      });
+
+      root.querySelectorAll("img").forEach((el) => {
+        setIfEmpty(el, "maxWidth", "100%");
+        setIfEmpty(el, "borderRadius", preset.imageRadius);
+        setIfEmpty(el, "display", "block");
+        setIfEmpty(el, "margin", "0.6em auto");
+        setIfEmpty(el, "boxShadow", preset.imageShadow);
+      });
+    }
+
+    function groupConsecutiveImages(doc) {
+      const body = doc.body;
+      const children = Array.from(body.children);
+      const imagesToProcess = [];
+
+      children.forEach((child, index) => {
+        if (child.tagName === "P") {
+          const images = child.querySelectorAll("img");
+          if (images.length > 1) {
+            Array.from(images).forEach((img) => {
+              imagesToProcess.push({ element: child, img, index });
+            });
+          } else if (images.length === 1) {
+            imagesToProcess.push({ element: child, img: images[0], index });
+          }
+        } else if (child.tagName === "IMG") {
+          imagesToProcess.push({ element: child, img: child, index });
+        }
+      });
+
+      const groups = [];
+      let currentGroup = [];
+      imagesToProcess.forEach((item, idx) => {
+        if (idx === 0) {
+          currentGroup.push(item);
+          return;
+        }
+        const prev = imagesToProcess[idx - 1];
+        const isContinuous = item.index === prev.index || item.index - prev.index === 1;
+        if (isContinuous) {
+          currentGroup.push(item);
+          return;
+        }
+        if (currentGroup.length) groups.push([...currentGroup]);
+        currentGroup = [item];
+      });
+      if (currentGroup.length) groups.push(currentGroup);
+
+      groups.forEach((group) => {
+        if (group.length < 2) return;
+        const firstElement = group[0].element;
+        const imageCount = group.length;
+        const grid = doc.createElement("div");
+        let columns = 2;
+        if (imageCount === 3) columns = 3;
+        if (imageCount >= 5) columns = 3;
+        grid.setAttribute("class", "image-grid");
+        grid.setAttribute("data-columns", String(columns));
+        grid.setAttribute(
+          "style",
+          [
+            "display:grid",
+            `grid-template-columns:repeat(${columns}, 1fr)`,
+            "gap:8px",
+            "margin:20px auto",
+            "max-width:100%",
+            "align-items:start",
+          ].join("; "),
+        );
+
+        group.forEach((item) => {
+          const imgWrapper = doc.createElement("div");
+          imgWrapper.setAttribute("style", "width:100%;height:auto;overflow:hidden;");
+          const img = item.img.cloneNode(true);
+          img.setAttribute(
+            "style",
+            "width:100%;height:auto;display:block;border-radius:8px;",
+          );
+          imgWrapper.appendChild(img);
+          grid.appendChild(imgWrapper);
+        });
+
+        firstElement.parentNode.insertBefore(grid, firstElement);
+        const elementsToRemove = new Set(group.map((item) => item.element));
+        elementsToRemove.forEach((element) => {
+          if (element.parentNode) element.parentNode.removeChild(element);
+        });
+      });
+    }
+
+    function convertGridNodeToTable(doc, grid, columns) {
+      const imgWrappers = Array.from(grid.children);
+      const table = doc.createElement("table");
+      table.setAttribute(
+        "style",
+        "width:100%;border-collapse:separate;border-spacing:8px;margin:20px auto;",
+      );
+
+      for (let i = 0; i < imgWrappers.length; i += columns) {
+        const tr = doc.createElement("tr");
+        for (let j = 0; j < columns; j += 1) {
+          const td = doc.createElement("td");
+          td.setAttribute("style", "padding:0;vertical-align:top;border:none;");
+          const wrapper = imgWrappers[i + j];
+          if (wrapper) {
+            const img = wrapper.querySelector("img");
+            if (img) {
+              const newImg = img.cloneNode(true);
+              newImg.setAttribute(
+                "style",
+                "width:100% !important;height:auto !important;display:block !important;margin:0 auto !important;border-radius:8px !important;object-fit:contain !important;",
+              );
+              td.appendChild(newImg);
+            }
+          }
+          tr.appendChild(td);
+        }
+        table.appendChild(tr);
+      }
+
+      grid.parentNode.replaceChild(table, grid);
+    }
+
+    function convertGridToTable(doc) {
+      doc.querySelectorAll(".image-grid").forEach((grid) => {
+        const columns = parseInt(grid.getAttribute("data-columns"), 10) || 2;
+        convertGridNodeToTable(doc, grid, columns);
+      });
+    }
+
+    function applyHuashengInlineStyles(html, theme) {
+      const style = getHuashengThemeStyle(theme);
+      if (!style) return html;
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      const headingInlineOverrides = {
+        strong: "font-weight: 700; color: inherit !important; background-color: transparent !important;",
+        em: "font-style: italic; color: inherit !important; background-color: transparent !important;",
+        a: "color: inherit !important; text-decoration: none !important; border-bottom: 1px solid currentColor !important; background-color: transparent !important;",
+        code: "color: inherit !important; background-color: transparent !important; border: none !important; padding: 0 !important;",
+        span: "color: inherit !important; background-color: transparent !important;",
+        b: "font-weight: 700; color: inherit !important; background-color: transparent !important;",
+        i: "font-style: italic; color: inherit !important; background-color: transparent !important;",
+        del: "color: inherit !important; background-color: transparent !important;",
+        mark: "color: inherit !important; background-color: transparent !important;",
+        s: "color: inherit !important; background-color: transparent !important;",
+        u: "color: inherit !important; text-decoration: underline !important; background-color: transparent !important;",
+        ins: "color: inherit !important; text-decoration: underline !important; background-color: transparent !important;",
+        kbd: "color: inherit !important; background-color: transparent !important; border: none !important; padding: 0 !important;",
+        sub: "color: inherit !important; background-color: transparent !important;",
+        sup: "color: inherit !important; background-color: transparent !important;",
+      };
+      const headingInlineSelectorList = Object.keys(headingInlineOverrides).join(", ");
+
+      groupConsecutiveImages(doc);
+
+      Object.keys(style).forEach((selector) => {
+        if (selector === "container" || selector === "pre" || selector === "code" || selector === "pre code") {
+          return;
+        }
+        doc.querySelectorAll(selector).forEach((el) => {
+          if (el.tagName === "IMG" && el.closest(".image-grid")) return;
+          const currentStyle = el.getAttribute("style") || "";
+          el.setAttribute("style", `${currentStyle}; ${style[selector]}`);
+        });
+      });
+
+      doc.querySelectorAll("pre, code, pre code").forEach((el) => {
+        const selector =
+          el.tagName.toLowerCase() === "pre"
+            ? "pre"
+            : el.parentElement?.tagName?.toLowerCase() === "pre"
+              ? "pre code"
+              : "code";
+        if (!style[selector]) return;
+        const currentStyle = el.getAttribute("style") || "";
+        el.setAttribute("style", `${currentStyle}; ${style[selector]}`);
+      });
+
+      doc.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((heading) => {
+        heading.querySelectorAll(headingInlineSelectorList).forEach((node) => {
+          const tag = node.tagName.toLowerCase();
+          const override = headingInlineOverrides[tag];
+          if (!override) return;
+          const sanitizedStyle = (node.getAttribute("style") || "")
+            .replace(/color:\s*[^;]+;?/gi, "")
+            .replace(/background(?:-color)?:\s*[^;]+;?/gi, "")
+            .replace(/border(?:-bottom)?:\s*[^;]+;?/gi, "")
+            .replace(/text-decoration:\s*[^;]+;?/gi, "")
+            .replace(/box-shadow:\s*[^;]+;?/gi, "")
+            .replace(/padding:\s*[^;]+;?/gi, "")
+            .replace(/;\s*;/g, ";")
+            .trim();
+          node.setAttribute("style", `${sanitizedStyle}; ${override}`);
+        });
+      });
+
+      const container = doc.createElement("div");
+      container.setAttribute("style", style.container);
+      container.innerHTML = doc.body.innerHTML;
+      return container.outerHTML;
+    }
+
+    function getThemePreset(theme) {
+      const base = {
+        bodyFont: '"Noto Sans SC", "Inter", sans-serif',
+        titleFont: '"Noto Sans SC", "Inter", sans-serif',
+        previewBg: theme.dark ? "#0f172a" : "#ffffff",
+        h1Size: 24,
+        h2Size: 20,
+        h3Size: 16,
+        h1Weight: "800",
+        hxWeight: "700",
+        h1Spacing: "-0.02em",
+        hxSpacing: "0",
+        h1Margin: "0 0 0.6em",
+        h2Margin: "1.1em 0 0.6em",
+        h3Margin: "1em 0 0.5em",
+        pMargin: "0.6em 0",
+        quoteBg: theme.soft,
+        quoteBorder: `4px solid ${theme.accent}`,
+        quotePadding: "10px 12px",
+        quoteMargin: "0.8em 0",
+        quoteRadius: "8px",
+        quoteItalic: true,
+        codePadding: "12px",
+        codeRadius: "10px",
+        codeFontSize: "12px",
+        codeFontFamily: '"Fira Code", "JetBrains Mono", monospace',
+        codeBorder: "",
+        tableBg: "transparent",
+        tableHeadBg: theme.soft,
+        tableRadius: "12px",
+        imageRadius: "10px",
+        imageShadow: "0 12px 24px rgba(15, 23, 42, 0.08)",
+        uppercaseHeadings: false,
+      };
+
+      const presets = {
+        tech: {
+          previewBg: "linear-gradient(180deg, #0b1220 0%, #111827 100%)",
+          titleFont: '"Inter", "Noto Sans SC", sans-serif',
+          h1Spacing: "-0.04em",
+          codeBorder: "1px solid rgba(96, 165, 250, 0.24)",
+          imageRadius: "14px",
+        },
+        wired: {
+          previewBg: "linear-gradient(180deg, #050b16 0%, #0f172a 100%)",
+          titleFont: '"Inter", "Noto Sans SC", sans-serif',
+          h1Size: 28,
+          h2Size: 19,
+          h1Weight: "900",
+          h1Spacing: "-0.05em",
+          uppercaseHeadings: true,
+          quoteBg: "rgba(34, 211, 238, 0.08)",
+          quoteBorder: "4px solid #22d3ee",
+          codeBorder: "1px solid rgba(34, 211, 238, 0.24)",
+          imageRadius: "6px",
+        },
+        "ai-coder": {
+          previewBg: "#0b1020",
+          bodyFont: '"IBM Plex Mono", "JetBrains Mono", monospace',
+          titleFont: '"IBM Plex Mono", "JetBrains Mono", monospace',
+          h1Size: 25,
+          h2Size: 18,
+          h3Size: 15,
+          h1Weight: "700",
+          hxWeight: "700",
+          quoteBg: "rgba(52, 211, 153, 0.08)",
+          quoteBorder: "4px solid #34d399",
+          quoteItalic: false,
+          codeBorder: "1px solid rgba(52, 211, 153, 0.28)",
+          tableHeadBg: "#10211b",
+          imageRadius: "8px",
+        },
+        cream: {
+          previewBg: "#fffaf4",
+          bodyFont: '"Noto Serif SC", serif',
+          titleFont: '"Noto Serif SC", serif',
+          h1Spacing: "0.01em",
+          quoteBg: "#fff7ee",
+          imageRadius: "16px",
+        },
+        clean: {
+          previewBg: "#fcfdf8",
+          quoteBg: "#effaf3",
+          tableHeadBg: "#effaf3",
+          imageRadius: "16px",
+        },
+        rose: {
+          previewBg: "#fff8fb",
+          quoteBg: "#fff0f6",
+          imageRadius: "18px",
+        },
+        minimal: {
+          previewBg: "#ffffff",
+          h1Spacing: "-0.03em",
+          quoteItalic: false,
+          tableHeadBg: "#f1f5ff",
+        },
+        mono: {
+          previewBg: "#ffffff",
+          bodyFont: '"Inter", "Noto Sans SC", sans-serif',
+          titleFont: '"Inter", "Noto Sans SC", sans-serif',
+          h1Spacing: "-0.04em",
+          imageRadius: "4px",
+          imageShadow: "0 8px 18px rgba(15, 23, 42, 0.05)",
+        },
+        navy: {
+          previewBg: "#f8fbff",
+          bodyFont: '"Noto Serif SC", serif',
+          titleFont: '"Inter", "Noto Sans SC", sans-serif',
+          quoteBg: "#eef2ff",
+        },
+        forest: {
+          previewBg: "#fbfefb",
+          bodyFont: '"Noto Serif SC", serif',
+          titleFont: '"Noto Sans SC", sans-serif',
+          imageRadius: "16px",
+        },
+        mint: {
+          previewBg: "#fbfffe",
+          quoteBg: "#effdfb",
+          tableHeadBg: "#effdfb",
+          imageRadius: "14px",
+        },
+        amber: {
+          previewBg: "#fffaf5",
+          h1Weight: "900",
+          quoteBg: "#fff7ed",
+          imageRadius: "14px",
+        },
+        sunset: {
+          previewBg: "#fff8f8",
+          bodyFont: '"Noto Serif SC", serif',
+          quoteBg: "#fff1f2",
+          imageRadius: "18px",
+        },
+        purple: {
+          previewBg: "#faf8ff",
+          quoteBg: "#f3f1ff",
+          imageRadius: "16px",
+        },
+      };
+
+      return { ...base, ...(presets[theme.id] || {}) };
+    }
+
+    function inlineStylesFromStyleTags(root, options = {}) {
+      const { applyTagSelectors = false } = options;
+      const styleTags = Array.from(root.querySelectorAll("style"));
+      if (!styleTags.length) return;
+
+      const applyStyleText = (el, cssText) => {
+        if (!cssText) return;
+        const existing = el.getAttribute("style") || "";
+        const merged = mergeInlineStyles(existing, cssText);
+        el.setAttribute("style", merged);
+      };
+
+      styleTags.forEach((tag) => {
+        const css = tag.textContent || "";
+        const classRule = /\.([a-zA-Z0-9_-]+)\s*\{([^}]+)\}/g;
+        let match;
+        while ((match = classRule.exec(css))) {
+          const className = match[1];
+          const styleText = match[2];
+          root.querySelectorAll(`.${className}`).forEach((el) => {
+            applyStyleText(el, styleText);
+          });
+        }
+
+        if (applyTagSelectors) {
+          const tagRule = /(^|[\}\n])\s*([a-zA-Z][a-zA-Z0-9]*)\s*\{([^}]+)\}/g;
+          while ((match = tagRule.exec(css))) {
+            const tagName = match[2];
+            const styleText = match[3];
+            root.querySelectorAll(tagName).forEach((el) => {
+              applyStyleText(el, styleText);
+            });
+          }
+        }
+      });
+
+      styleTags.forEach((tag) => tag.remove());
+    }
+
+    function mergeInlineStyles(existing, extra) {
+      const map = {};
+      const toMap = (text) => {
+        text
+          .split(";")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .forEach((pair) => {
+            const [k, v] = pair.split(":").map((x) => (x || "").trim());
+            if (k && v) map[k.toLowerCase()] = v;
+          });
+      };
+      toMap(existing);
+      toMap(extra);
+      return Object.entries(map)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("; ");
+    }
+
+    function sanitizePastedHtml(html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      const container = document.createElement("div");
+      container.innerHTML = doc.body ? doc.body.innerHTML : html;
+      inlineStylesFromStyleTags(container, { applyTagSelectors: false });
+      container.querySelectorAll("style").forEach((tag) => tag.remove());
+      return container.innerHTML;
+    }
+
+    function prepareWechatCompatibleHtml(html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      convertGridToTable(doc);
+      return {
+        html: doc.body.innerHTML,
+        text: doc.body.textContent || "",
+      };
+    }
+
+    async function copyHtmlToClipboard(html) {
+      const prepared = prepareWechatCompatibleHtml(html);
+      const finalHtml = prepared.html;
+      const plainText = prepared.text;
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        const blobHtml = new Blob([finalHtml], { type: "text/html" });
+        const blobText = new Blob([plainText], { type: "text/plain" });
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": blobHtml,
+            "text/plain": blobText,
+          }),
+        ]);
+        return;
+      }
+      const temp = document.createElement("div");
+      temp.innerHTML = finalHtml;
+      temp.style.position = "fixed";
+      temp.style.left = "-9999px";
+      document.body.appendChild(temp);
+      const range = document.createRange();
+      range.selectNodeContents(temp);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand("copy");
+      sel.removeAllRanges();
+      temp.remove();
+    }
+
+    function showCopyToast(message = "已复制，可以去公众号粘贴使用。") {
+      const toast = document.getElementById("copyToast");
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 1600);
+    }
+
+    function updateStatusBadge(text = "已自动保存") {
+      if (statusBadge) statusBadge.textContent = text;
+    }
+
+    function getCurrentDocumentHtml() {
+      return editorMode === "rich" ? editorRich.innerHTML || "" : htmlContent || "";
+    }
+
+    function getCurrentDocumentText() {
+      const temp = document.createElement("div");
+      temp.innerHTML = getCurrentDocumentHtml();
+      return (temp.textContent || temp.innerText || "").trim();
+    }
+
+    function extractTitleFromContent() {
+      const temp = document.createElement("div");
+      temp.innerHTML = getCurrentDocumentHtml();
+      const heading = temp.querySelector("h1, h2, h3");
+      const headingText = heading?.textContent?.trim();
+      if (headingText) return headingText;
+      const text = (temp.textContent || "").replace(/\s+/g, " ").trim();
+      if (!text) return "无标题";
+      return text.slice(0, 20) + (text.length > 20 ? "..." : "");
+    }
+
+    function saveArticleHistoryStore() {
+      localStorage.setItem("md-article-history", JSON.stringify({ articles: articleHistory }));
+    }
+
+    function loadArticleHistoryStore() {
+      try {
+        const saved = localStorage.getItem("md-article-history");
+        const data = saved ? JSON.parse(saved) : null;
+        articleHistory = Array.isArray(data?.articles) ? data.articles : [];
+      } catch {
+        articleHistory = [];
+      }
+    }
+
+    function formatHistoryDate(timestamp) {
+      if (!timestamp) return "";
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = now - date;
+      if (diff < 60 * 1000) return "刚刚";
+      if (diff < 60 * 60 * 1000) return `${Math.floor(diff / (60 * 1000))} 分钟前`;
+      if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / (60 * 60 * 1000))} 小时前`;
+      return `${date.getMonth() + 1}-${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function renderHistoryList() {
+      if (historyCount) historyCount.textContent = `${articleHistory.length}/20`;
+      if (!historyList) return;
+      if (!articleHistory.length) {
+        historyList.innerHTML = `<div class="history-empty"><p>暂无历史记录</p><span>点击保存后，会在这里保留常用版本。</span></div>`;
+        return;
+      }
+      historyList.innerHTML = articleHistory.map((article) => {
+        const theme = themes.find((item) => item.id === article.themeId);
+        const themeName = theme?.name || article.themeId || "未命名样式";
+        return `
+          <div class="history-item" data-history-id="${article.id}">
+            <div class="history-title">${escapeHtml(article.title || "无标题")}</div>
+            <div class="history-meta">
+              <span>${formatHistoryDate(article.updatedAt)}</span>
+              <span class="history-style">${escapeHtml(themeName)}</span>
+            </div>
+            <div class="history-actions">
+              <button class="history-action-btn load" data-load-id="${article.id}">加载</button>
+              <button class="history-action-btn delete" data-delete-id="${article.id}">删除</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      historyList.querySelectorAll("[data-load-id]").forEach((btn) => {
+        btn.addEventListener("click", () => loadFromHistory(btn.dataset.loadId));
+      });
+      historyList.querySelectorAll("[data-delete-id]").forEach((btn) => {
+        btn.addEventListener("click", () => deleteFromHistory(btn.dataset.deleteId));
+      });
+    }
+
+    function toggleHistoryPanel(force) {
+      const shouldOpen = typeof force === "boolean" ? force : !historySidebar.classList.contains("open");
+      historySidebar.classList.toggle("open", shouldOpen);
+      historyOverlay.classList.toggle("visible", shouldOpen);
+    }
+
+    function saveToHistory(options = {}) {
+      const { silent = false } = options;
+      const content = getCurrentDocumentHtml();
+      if (!content.trim()) {
+        if (!silent) showCopyToast("内容为空，无法保存。");
+        return;
+      }
+      const now = Date.now();
+      const themeId = currentTheme.id;
+      const title = extractTitleFromContent();
+
+      if (currentArticleId) {
+        const index = articleHistory.findIndex((item) => item.id === currentArticleId);
+        if (index !== -1) {
+          const updated = {
+            ...articleHistory[index],
+            title,
+            content,
+            themeId,
+            editorMode,
+            updatedAt: now,
+          };
+          articleHistory.splice(index, 1);
+          articleHistory.unshift(updated);
+          saveArticleHistoryStore();
+          renderHistoryList();
+          updateStatusBadge("已保存到历史");
+          if (!silent) showCopyToast("已更新历史记录。");
+          return;
+        }
+      }
+
+      const article = {
+        id: `article-${now}-${Math.random().toString(36).slice(2, 8)}`,
+        title,
+        content,
+        themeId,
+        editorMode,
+        createdAt: now,
+        updatedAt: now,
+      };
+      currentArticleId = article.id;
+      articleHistory.unshift(article);
+      articleHistory = articleHistory.slice(0, 20);
+      saveArticleHistoryStore();
+      renderHistoryList();
+      updateStatusBadge("已保存到历史");
+      if (!silent) showCopyToast("已保存到历史记录。");
+    }
+
+    function loadFromHistory(articleId) {
+      const article = articleHistory.find((item) => item.id === articleId);
+      if (!article) return;
+      currentArticleId = article.id;
+      htmlContent = article.content || "";
+      editor.value = htmlContent;
+      editorRich.innerHTML = htmlContent;
+      const theme = themes.find((item) => item.id === article.themeId);
+      if (theme) {
+        currentTheme = theme;
+        customStyle.accent = theme.accent;
+        renderThemes();
+        applyTheme(theme);
+      }
+      setEditorMode(article.editorMode || "rich");
+      updatePreview();
+      toggleHistoryPanel(false);
+      updateStatusBadge("已加载历史");
+      showCopyToast("已加载历史记录。");
+    }
+
+    function deleteFromHistory(articleId) {
+      articleHistory = articleHistory.filter((item) => item.id !== articleId);
+      if (currentArticleId === articleId) currentArticleId = null;
+      saveArticleHistoryStore();
+      renderHistoryList();
+      showCopyToast("已删除历史记录。");
+    }
+
+    function sanitizeForXArticles(doc) {
+      const ALLOWED_TAGS = new Set(["h2", "h3", "p", "strong", "em", "del", "a", "ul", "ol", "li", "blockquote", "br", "b", "i", "s"]);
+      doc.querySelectorAll("h1").forEach((node) => {
+        const h2 = doc.createElement("h2");
+        h2.innerHTML = node.innerHTML;
+        node.parentNode.replaceChild(h2, node);
+      });
+      doc.querySelectorAll("h4, h5, h6").forEach((node) => {
+        const h3 = doc.createElement("h3");
+        h3.innerHTML = node.innerHTML;
+        node.parentNode.replaceChild(h3, node);
+      });
+      doc.querySelectorAll('div[style*="border-radius"], pre').forEach((block) => {
+        const codeEl = block.querySelector("code") || block;
+        const codeText = codeEl.textContent || codeEl.innerText || "";
+        const bq = doc.createElement("blockquote");
+        codeText.split("\n").forEach((line, i) => {
+          if (i > 0) bq.appendChild(doc.createElement("br"));
+          bq.appendChild(doc.createTextNode(line || "\u00A0"));
+        });
+        block.parentNode.replaceChild(bq, block);
+      });
+      doc.querySelectorAll("table").forEach((table) => {
+        const bq = doc.createElement("blockquote");
+        table.querySelectorAll("tr").forEach((row, ri) => {
+          if (ri > 0) bq.appendChild(doc.createElement("br"));
+          const cellTexts = Array.from(row.querySelectorAll("th, td")).map((c) => (c.textContent || "").trim());
+          bq.appendChild(doc.createTextNode(`| ${cellTexts.join(" | ")} |`));
+        });
+        table.parentNode.replaceChild(bq, table);
+      });
+      doc.querySelectorAll("img").forEach((img) => {
+        const p = doc.createElement("p");
+        p.textContent = `[${img.getAttribute("alt") || "图片"}]`;
+        const parent = img.parentNode;
+        if (parent && parent.tagName === "P") parent.parentNode.replaceChild(p, parent);
+        else img.parentNode.replaceChild(p, img);
+      });
+      doc.querySelectorAll("hr").forEach((hr) => {
+        const p = doc.createElement("p");
+        p.textContent = "———";
+        hr.parentNode.replaceChild(p, hr);
+      });
+      const cleanNode = (node) => {
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        Array.from(node.childNodes).forEach(cleanNode);
+        const tag = node.tagName.toLowerCase();
+        if (tag !== "a") {
+          while (node.attributes.length) node.removeAttribute(node.attributes[0].name);
+        } else {
+          const href = node.getAttribute("href");
+          while (node.attributes.length) node.removeAttribute(node.attributes[0].name);
+          if (href) node.setAttribute("href", href);
+        }
+        if (!ALLOWED_TAGS.has(tag) && tag !== "body") {
+          const fragment = doc.createDocumentFragment();
+          while (node.firstChild) fragment.appendChild(node.firstChild);
+          node.parentNode.replaceChild(fragment, node);
+        }
+      };
+      cleanNode(doc.body);
+      doc.querySelectorAll("blockquote, p").forEach((el) => {
+        if (!el.textContent.trim() && !el.querySelector("br")) el.remove();
+      });
+    }
+
+    async function copyHtmlToXArticles(html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      sanitizeForXArticles(doc);
+      const finalHtml = doc.body.innerHTML;
+      const plainText = doc.body.innerText || doc.body.textContent || "";
+      if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": new Blob([finalHtml], { type: "text/html" }),
+            "text/plain": new Blob([plainText], { type: "text/plain" }),
+          }),
+        ]);
+        return;
+      }
+      const temp = document.createElement("div");
+      temp.innerHTML = finalHtml;
+      temp.style.position = "fixed";
+      temp.style.left = "-9999px";
+      document.body.appendChild(temp);
+      const range = document.createRange();
+      range.selectNodeContents(temp);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand("copy");
+      sel.removeAllRanges();
+      temp.remove();
+    }
+
+    document.getElementById("btnCopyWechat").addEventListener("click", async () => {
+      try {
+        await copyHtmlToClipboard(buildWeChatHtml());
+        saveToHistory({ silent: true });
+        updateStatusBadge("已复制到公众号");
+        showCopyToast("已复制，可以去公众号粘贴使用。");
+      } catch {
+        alert("复制失败，请手动复制。");
+      }
+    });
+
+    btnCopyX?.addEventListener("click", async () => {
+      try {
+        await copyHtmlToXArticles(buildWeChatHtml());
+        saveToHistory({ silent: true });
+        updateStatusBadge("已复制到 X");
+        showCopyToast("已复制 X Articles 格式。");
+      } catch {
+        alert("复制失败，请手动复制。");
+      }
+    });
+
+    btnSaveHistory?.addEventListener("click", saveToHistory);
+    btnHistory?.addEventListener("click", () => toggleHistoryPanel(true));
+    btnCloseHistory?.addEventListener("click", () => toggleHistoryPanel(false));
+    historyOverlay?.addEventListener("click", () => toggleHistoryPanel(false));
+
+    btnModeWechat.addEventListener("click", () => {
+      previewMode = "wechat";
+      btnModeWechat.classList.add("active");
+      updatePreview();
+    });
+
+    btnUploadImg.addEventListener("click", () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const url = e.target.result;
+          insertAtCursor(`![图片](${url})`);
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    });
+
+    editor.addEventListener("keydown", (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key.toLowerCase() === "b") {
+          e.preventDefault();
+          applyInline("**{text}**");
+        }
+        if (e.key.toLowerCase() === "i") {
+          e.preventDefault();
+          applyInline("*{text}*");
+        }
+        if (e.key.toLowerCase() === "u") {
+          e.preventDefault();
+          applyInline("<u>{text}</u>");
+        }
+      }
+    });
+
+    const btnExport = document.getElementById("btnExport");
+    const exportMenu = document.getElementById("exportMenu");
+
+    btnExport.addEventListener("click", () => {
+      exportMenu.style.display = exportMenu.style.display === "block" ? "none" : "block";
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!btnExport.contains(e.target) && !exportMenu.contains(e.target)) {
+        exportMenu.style.display = "none";
+      }
+    });
+
+    exportMenu.querySelectorAll(".dropdown-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        const type = item.dataset.export;
+        exportMenu.style.display = "none";
+        handleExport(type);
+      });
+    });
+
+    function handleExport(type) {
+      if (type === "md") return downloadText(editor.value, "markdown.md");
+      if (type === "html") return downloadText(prepareWechatCompatibleHtml(buildWeChatHtml()).html, "wechat.html");
+      if (type === "word") return downloadText(buildWordHtml(), "wechat.doc");
+      if (type === "pdf") return window.print();
+    }
+
+    function downloadText(content, filename) {
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function buildWordHtml() {
+      const html = buildWeChatHtml();
+      return `<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body>${html}</body></html>`;
+    }
+
+    const modal = document.getElementById("styleModal");
+    const btnStyle = document.getElementById("btnStyleConfig");
+    const btnClose = document.getElementById("closeStyleModal");
+    const colorGrid = document.getElementById("colorGrid");
+    const fontSizeInput = document.getElementById("fontSizeInput");
+    const lineHeightInput = document.getElementById("lineHeightInput");
+    const colorHexInput = document.getElementById("colorHexInput");
+
+    const palette = [
+      "#3b82f6", "#ef4444", "#22c55e", "#7c3aed", "#f59e0b", "#111827",
+      "#14b8a6", "#8b5cf6", "#0ea5e9", "#d9487f", "#059669", "#ea580c",
+      "#16a34a", "#1d4ed8", "#7c2d12", "#9ca3af", "#0f766e", "#0f172a"
+    ];
+
+    function renderPalette() {
+      colorGrid.innerHTML = palette
+        .map((c) => `<div class="color-dot ${c === customStyle.accent ? "active" : ""}" data-color="${c}" style="background:${c}"></div>`)
+        .join("");
+      colorGrid.querySelectorAll(".color-dot").forEach((dot) => {
+        dot.addEventListener("click", () => {
+          customStyle.accent = dot.dataset.color;
+          colorHexInput.value = customStyle.accent;
+          applyTheme(currentTheme);
+          updatePreview();
+          renderPalette();
+        });
+      });
+    }
+
+    btnStyle.addEventListener("click", () => {
+      modal.style.display = "flex";
+      renderPalette();
+      fontSizeInput.value = customStyle.fontSize;
+      lineHeightInput.value = customStyle.lineHeight;
+      colorHexInput.value = customStyle.accent;
+    });
+
+    btnClose.addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.style.display = "none";
+    });
+
+    fontSizeInput.addEventListener("input", () => {
+      customStyle.fontSize = parseInt(fontSizeInput.value || "16", 10);
+      updatePreview();
+    });
+
+    lineHeightInput.addEventListener("input", () => {
+      customStyle.lineHeight = parseFloat(lineHeightInput.value || "1.8");
+      updatePreview();
+    });
+
+    colorHexInput.addEventListener("input", () => {
+      const val = colorHexInput.value.trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+        customStyle.accent = val;
+        applyTheme(currentTheme);
+        updatePreview();
+        renderPalette();
+      }
+    });
+
+    document.querySelectorAll(".align-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".align-btn").forEach((el) => el.classList.remove("active"));
+        btn.classList.add("active");
+        customStyle.align = btn.dataset.align;
+        updatePreview();
+      });
+    });
+
+    editor.addEventListener("input", () => {
+      if (editorMode === "html") {
+        htmlContent = editor.value;
+      }
+      updateStatusBadge("编辑中");
+      updatePreview();
+      syncScroll(true);
+    });
+    editor.addEventListener("scroll", () => {
+      if (editorMode !== "html") return;
+      syncScroll(true);
+    });
+    editorRich.addEventListener("input", () => {
+      if (editorMode !== "rich") return;
+      htmlContent = editorRich.innerHTML;
+      updateStatusBadge("编辑中");
+      updatePreview();
+      syncScroll(true);
+    });
+    editorRich.addEventListener("scroll", () => {
+      if (editorMode !== "rich") return;
+      syncScroll(true);
+    });
+    preview.addEventListener("scroll", () => syncScroll(false));
+    searchInput.addEventListener("input", renderThemes);
+
+    loadArticleHistoryStore();
+    renderHistoryList();
+    renderFilters();
+    renderThemes();
+    applyTheme(currentTheme);
+    updatePreview();
+
+    const minLeft = 260;
+    const minMiddle = 280;
+    const minRight = 168;
+    const splitterWidth = 6;
+    const gridGap = 6;
+
+    function getAvailableWidth() {
+      const style = getComputedStyle(layout);
+      const paddingLeft = parseFloat(style.paddingLeft) || 0;
+      const paddingRight = parseFloat(style.paddingRight) || 0;
+      const total =
+        layout.clientWidth -
+        paddingLeft -
+        paddingRight -
+        splitterWidth * 2 -
+        gridGap * 4;
+      return Math.max(0, total);
+    }
+
+    function clampWidths(leftPx, middlePx, rightPx) {
+      const total = getAvailableWidth();
+      if (total <= 0) return { left: leftPx, middle: middlePx, right: rightPx };
+      const minSum = minLeft + minMiddle + minRight;
+      if (total <= minSum) {
+        const scale = total / minSum;
+        return {
+          left: Math.max(160, Math.floor(minLeft * scale)),
+          middle: Math.max(180, Math.floor(minMiddle * scale)),
+          right: Math.max(140, Math.floor(minRight * scale)),
+        };
+      }
+      const maxExtra = total - minSum;
+      const baseLeft = Math.max(minLeft, leftPx);
+      const baseMiddle = Math.max(minMiddle, middlePx);
+      const baseRight = Math.max(minRight, rightPx);
+      const baseExtra = baseLeft + baseMiddle + baseRight - minSum;
+      const ratioLeft = baseExtra > 0 ? (baseLeft - minLeft) / baseExtra : 1 / 3;
+      const ratioMiddle = baseExtra > 0 ? (baseMiddle - minMiddle) / baseExtra : 1 / 3;
+      const ratioRight = 1 - ratioLeft - ratioMiddle;
+      return {
+        left: Math.round(minLeft + maxExtra * ratioLeft),
+        middle: Math.round(minMiddle + maxExtra * ratioMiddle),
+        right: Math.round(minRight + maxExtra * ratioRight),
+      };
+    }
+
+    function setLayoutWidths(leftPx, middlePx, rightPx) {
+      const clamped = clampWidths(leftPx, middlePx, rightPx);
+      layout.style.gridTemplateColumns = `${clamped.left}px ${splitterWidth}px ${clamped.middle}px ${splitterWidth}px ${clamped.right}px`;
+      localStorage.setItem("md-layout-widths", JSON.stringify(clamped));
+    }
+
+    function initLayoutWidths() {
+      const saved = localStorage.getItem("md-layout-widths");
+      if (saved) {
+        try {
+          const { left, middle, right } = JSON.parse(saved);
+          if (left && middle && right) return setLayoutWidths(left, middle, Math.max(minRight, Math.min(right, 208)));
+        } catch {}
+      }
+      const total = getAvailableWidth();
+      if (total <= 0) return;
+      setLayoutWidths(total * 0.39, total * 0.43, minRight);
+    }
+
+    function setupSplitter(splitter, side) {
+      splitter.addEventListener("mousedown", (e) => {
+        if (window.matchMedia("(max-width: 1100px)").matches) return;
+        e.preventDefault();
+        splitter.classList.add("active");
+        const startX = e.clientX;
+        const rect = layout.getBoundingClientRect();
+        const totalWidth = rect.width - splitterWidth * 2;
+        const cols = getComputedStyle(layout).gridTemplateColumns.split(" ").map((c) => parseFloat(c));
+        let leftW = cols[0];
+        let middleW = cols[2];
+        let rightW = cols[4];
+
+        function onMove(ev) {
+          const dx = ev.clientX - startX;
+          if (side === "left") {
+            let nextLeft = Math.max(minLeft, Math.min(leftW + dx, totalWidth - minMiddle - minRight));
+            let nextMiddle = Math.max(minMiddle, totalWidth - nextLeft - rightW);
+            if (nextMiddle < minMiddle) {
+              nextMiddle = minMiddle;
+              nextLeft = totalWidth - nextMiddle - rightW;
+            }
+            setLayoutWidths(nextLeft, nextMiddle, rightW);
+          } else {
+            let nextRight = Math.max(minRight, Math.min(rightW - dx, totalWidth - minLeft - minMiddle));
+            let nextMiddle = Math.max(minMiddle, totalWidth - leftW - nextRight);
+            if (nextMiddle < minMiddle) {
+              nextMiddle = minMiddle;
+              nextRight = totalWidth - leftW - nextMiddle;
+            }
+            setLayoutWidths(leftW, nextMiddle, nextRight);
+          }
+        }
+
+        function onUp() {
+          splitter.classList.remove("active");
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+        }
+
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+      });
+    }
+
+    setupSplitter(splitterLeft, "left");
+    setupSplitter(splitterRight, "right");
+    initLayoutWidths();
+    window.addEventListener("resize", () => {
+      const saved = localStorage.getItem("md-layout-widths");
+      if (!saved) return initLayoutWidths();
+      try {
+        const { left, middle, right } = JSON.parse(saved);
+        if (left && middle && right) setLayoutWidths(left, middle, right);
+      } catch {
+        initLayoutWidths();
+      }
+    });
+  </script>
+</body>
+</html>

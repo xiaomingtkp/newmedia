@@ -1,0 +1,4493 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>新媒体图文生成器</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/turndown@7.2.0/dist/turndown.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/turndown-plugin-gfm@1.0.2/dist/turndown-plugin-gfm.js"></script>
+
+    <link rel="stylesheet" href="fonts/fonts.css" />
+
+    <style id="dynamic-heading-style"></style>
+
+    <style>
+      /* ==================== 基础交互样式 ==================== */
+      :root {
+        --bg: #f4f1eb;
+        --ink: #17191c;
+        --ink-soft: #2d3137;
+        --muted: #69707d;
+        --muted-soft: #8a93a1;
+        --accent: #f25f3a;
+        --accent-dark: #d84b28;
+        --accent-soft: rgba(242, 95, 58, 0.11);
+        --line: rgba(23, 25, 28, 0.08);
+        --line-strong: rgba(23, 25, 28, 0.14);
+        --panel: rgba(255, 255, 255, 0.84);
+        --shadow-soft: 0 18px 40px rgba(17, 24, 39, 0.08);
+      }
+
+      body {
+        font-family: "Inter", "SF Pro Display", "Noto Sans SC", sans-serif;
+        background:
+          radial-gradient(circle at 8% 10%, rgba(244, 118, 74, 0.16) 0, transparent 28%),
+          radial-gradient(circle at 85% 16%, rgba(48, 168, 141, 0.12) 0, transparent 26%),
+          radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.8) 0, transparent 42%),
+          var(--bg);
+        color: var(--ink);
+        overflow: hidden;
+        touch-action: none;
+        position: relative;
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        width: 340px;
+        height: 340px;
+        border-radius: 50%;
+        filter: blur(72px);
+        opacity: 0.42;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      body::before {
+        top: -120px;
+        left: -120px;
+        background: rgba(255, 196, 171, 0.48);
+      }
+
+      body::after {
+        right: -120px;
+        bottom: -120px;
+        background: rgba(184, 234, 222, 0.46);
+      }
+
+      @keyframes fadeUpSoft {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes modalInSoft {
+        from {
+          opacity: 0;
+          transform: translateY(12px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e5e7eb;
+        border-radius: 3px;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+        border-color: rgba(242, 95, 58, 0.28);
+        box-shadow: 0 0 0 3px rgba(242, 95, 58, 0.1);
+        background: rgba(255,255,255,0.96);
+      }
+
+      input[type="text"],
+      input[type="number"],
+      input[type="search"],
+      textarea,
+      select {
+        border-color: rgba(23, 25, 28, 0.08) !important;
+        background: rgba(255,255,255,0.86) !important;
+        border-radius: 12px !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.78);
+        transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease, transform 120ms ease;
+      }
+
+      /* 拖拽条 */
+      .resizer {
+        width: 4px;
+        background-color: rgba(255, 255, 255, 0.72);
+        cursor: col-resize;
+        transition: background-color 0.2s, box-shadow 0.2s, border-color 0.2s;
+        position: relative;
+        z-index: 40;
+        flex-shrink: 0;
+        touch-action: none;
+        border: 1px solid rgba(23, 25, 28, 0.08);
+        border-radius: 999px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.78);
+      }
+
+      .resizer::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -15px;
+        right: -15px;
+        z-index: 40;
+      }
+
+      .resizer:hover,
+      .resizer.active {
+        background-color: var(--accent);
+        border-color: rgba(242, 95, 58, 0.22);
+      }
+
+      /* 折叠按钮 */
+      .toggle-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 60px;
+        background: rgba(255,255,255,0.92);
+        border: 1px solid rgba(23, 25, 28, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 50;
+        color: #4b5563;
+        box-shadow: 0 14px 24px rgba(17, 24, 39, 0.08);
+        transition: all 0.2s;
+        border-radius: 10px;
+      }
+
+      .toggle-btn:hover {
+        background: rgba(255,255,255,0.98);
+        color: var(--accent);
+        transform: translateY(-50%) scale(1.1);
+      }
+
+      #left-toggle {
+        right: -28px;
+        border-radius: 0 8px 8px 0;
+        border-left: none;
+      }
+
+      #right-toggle {
+        left: -28px;
+        border-radius: 8px 0 0 8px;
+        border-right: none;
+      }
+
+      .global-header {
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 0 16px;
+        background: rgba(255, 255, 255, 0.76);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.72);
+        box-shadow: 0 16px 32px rgba(17, 24, 39, 0.08);
+        backdrop-filter: blur(18px);
+        z-index: 60;
+        position: relative;
+        animation: fadeUpSoft 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      .global-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .global-badge {
+        width: 30px;
+        height: 30px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--ink), #414751);
+        box-shadow: 0 12px 22px rgba(23, 25, 28, 0.18);
+      }
+
+      .page-title {
+        font-weight: 800;
+        font-size: 14px;
+        color: var(--ink);
+        letter-spacing: -0.02em;
+      }
+
+      .page-switch {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 7px 12px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.82);
+        min-width: 150px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+      }
+
+      .header-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .header-btn {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.82);
+        color: var(--ink);
+        padding: 7px 11px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 36px;
+        cursor: pointer;
+        transition: transform 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.76);
+      }
+
+      .header-btn:hover {
+        border-color: rgba(242, 95, 58, 0.28);
+        color: var(--accent);
+        transform: translateY(-1px);
+        box-shadow: 0 12px 22px rgba(17, 24, 39, 0.06);
+      }
+
+      .header-btn.danger {
+        border-color: rgba(239, 68, 68, 0.5);
+        color: #ef4444;
+      }
+
+      .header-btn.danger:hover {
+        background: #fef2f2;
+        border-color: #ef4444;
+        color: #ef4444;
+      }
+
+      .shortcut-mask {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.4);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1200;
+        backdrop-filter: blur(2px);
+      }
+
+      .shortcut-modal {
+        width: 420px;
+        max-width: 92vw;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        box-shadow: 0 24px 50px rgba(15, 23, 42, 0.14);
+        overflow: hidden;
+        backdrop-filter: blur(20px);
+      }
+
+      .shortcut-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .shortcut-body {
+        padding: 12px 16px 16px;
+        display: grid;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .shortcut-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        border: 1px solid rgba(23, 25, 28, 0.08);
+        border-radius: 14px;
+        background: rgba(255,255,255,0.82);
+      }
+
+      .shortcut-key {
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .shortcut-close {
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.82);
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1300;
+        backdrop-filter: blur(2px);
+      }
+
+      .modal-overlay.show {
+        display: flex;
+      }
+
+      .modal-overlay.show .modal {
+        animation: modalInSoft 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      .modal {
+        width: 640px;
+        max-width: 92vw;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        box-shadow: 0 24px 50px rgba(15, 23, 42, 0.14);
+        overflow: hidden;
+        backdrop-filter: blur(20px);
+      }
+
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+        font-weight: 800;
+        background: rgba(255,255,255,0.72);
+      }
+
+      .modal-body {
+        padding: 16px;
+        max-height: 70vh;
+        overflow-y: auto;
+      }
+
+      .modal-footer {
+        padding: 12px 16px 16px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .flow-section {
+        margin-bottom: 22px;
+      }
+
+      .flow-section-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 10px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid rgba(255, 77, 58, 0.2);
+      }
+
+      .flow-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .flow-item {
+        background: rgba(255, 247, 244, 0.92);
+        border-radius: 14px;
+        padding: 12px 14px;
+        border-left: 3px solid var(--accent);
+        border: 1px solid rgba(242, 95, 58, 0.1);
+      }
+
+      .flow-time {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--ink);
+        margin-bottom: 4px;
+      }
+
+      .flow-desc {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .flow-tip {
+        font-size: 12px;
+        color: var(--accent);
+      }
+
+      .flow-levels {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+
+      .flow-level {
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.82);
+        border: 1px solid rgba(23, 25, 28, 0.08);
+      }
+
+      .flow-level.level-1 { border-left: 3px solid #ff6b6b; }
+      .flow-level.level-2 { border-left: 3px solid #ffa94d; }
+      .flow-level.level-3 { border-left: 3px solid #ffd43b; }
+      .flow-level.level-4 { border-left: 3px solid #69db7c; }
+      .flow-level.level-5 { border-left: 3px solid #4dabf7; }
+      .flow-level.level-6 { border-left: 3px solid #da77f2; }
+
+      .level-range {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--ink);
+        margin-bottom: 4px;
+      }
+
+      .level-issue {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .ces-formula {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 12px;
+        background: #fff7f4;
+        border-radius: 10px;
+        margin-bottom: 10px;
+      }
+
+      .ces-item {
+        padding: 6px 12px;
+        background: #fff;
+        border-radius: 6px;
+        font-size: 12px;
+        color: var(--ink);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      .ces-item.highlight {
+        background: rgba(255, 77, 58, 0.12);
+        color: var(--accent);
+        font-weight: 700;
+        border-color: rgba(255, 77, 58, 0.3);
+      }
+
+      .ces-plus {
+        color: rgba(15, 23, 42, 0.4);
+        font-size: 16px;
+      }
+
+      .ces-tip {
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .checklist {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .check-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--ink);
+        cursor: pointer;
+        padding: 8px 12px;
+        background: #fafafa;
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        transition: background 0.2s;
+      }
+
+      .check-item:hover {
+        background: #f4f4f5;
+      }
+
+      .check-item input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+      }
+
+
+      .page-body {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+        overflow: hidden;
+        position: relative;
+        z-index: 1;
+        animation: fadeUpSoft 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-delay: 70ms;
+      }
+
+      .panel-transition {
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* 卡片基础 */
+      .card-wrapper {
+        width: 375px;
+        height: 500px;
+        background: white;
+        position: relative;
+        overflow: hidden;
+        flex-shrink: 0;
+        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.15);
+        transition:
+          width 0.3s ease,
+          height 0.3s ease,
+          transform 0.2s;
+      }
+
+      /* Markdown 样式 (无表格) */
+      .markdown-body {
+        line-height: 1.7;
+        color: inherit;
+        padding-bottom: 32px;
+        box-sizing: border-box;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .markdown-body p {
+        margin-bottom: 0.8em;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .markdown-body > *:first-child {
+        margin-top: 0 !important;
+      }
+
+      .markdown-body > *:last-child {
+        margin-bottom: 0 !important;
+      }
+
+      .markdown-body blockquote p:last-child {
+        margin-bottom: 0;
+      }
+
+      .markdown-body ul {
+        padding-left: 1.2em;
+        margin-bottom: 0.8em;
+        list-style-type: disc;
+        padding-bottom: 8px;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .markdown-body ul:last-child,
+      .markdown-body ol:last-child {
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+      }
+
+      .markdown-body li {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .markdown-body li:last-child {
+        margin-bottom: 0 !important;
+      }
+
+      .editor-pane {
+        min-height: 0;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        overflow-y: auto;
+      }
+
+      #rich-editor {
+        font-family: "Noto Sans SC", "Inter", sans-serif;
+        white-space: pre-wrap;
+        height: 100%;
+      }
+
+      .markdown-body h1,
+      .markdown-body h2,
+      .markdown-body h3,
+      .markdown-body h4 {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .markdown-body pre {
+        padding: 12px;
+        border-radius: 6px;
+        overflow-x: hidden;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: "Menlo", monospace;
+        font-size: 0.85em;
+        margin-bottom: 1em;
+      }
+
+      .markdown-body code {
+        word-break: break-all;
+      }
+
+      .markdown-body img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        margin: 12px auto;
+        display: block;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      }
+
+      .img-row {
+        display: flex;
+        gap: 8px;
+        margin: 12px 0;
+        justify-content: center;
+        align-items: stretch;
+      }
+
+      .img-row img {
+        margin: 0 !important;
+        flex: 1;
+        width: 0;
+        min-width: 0;
+        object-fit: cover;
+        height: 100%;
+      }
+
+      /* ==================== 风格主题 CSS ==================== */
+
+      /* 1. 🔵 浅蓝风 (Light Blue) - 全新配色 */
+      .theme-minimal {
+        --bg: #ebf5fb;
+        /* 浅蓝背景 */
+        --text: #1e3a5f;
+        /* 深蓝文本 */
+        --gray: #566573;
+        /* 灰蓝辅助色 */
+        --border: #aed6f1;
+        /* 浅蓝边框 */
+        --accent: #3498db;
+        /* 亮蓝提亮色 */
+      }
+
+      .theme-minimal .card-bg {
+        background-color: var(--bg);
+        height: 100%;
+        padding: 32px;
+        font-family: "Inter", "Noto Sans SC", sans-serif;
+        display: flex;
+        flex-direction: column;
+        color: var(--text);
+      }
+
+      /* 标题颜色改为深蓝，左侧线条改为亮蓝 */
+      .theme-minimal .markdown-body h1 {
+        font-size: 1.5em;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.8em;
+        color: var(--text);
+        border-left: 3px solid var(--accent);
+        padding-left: 12px;
+      }
+
+      .theme-minimal .markdown-body h2 {
+        font-size: 1.2em;
+        font-weight: 700;
+        margin-top: 1.2em;
+        margin-bottom: 0.5em;
+        color: var(--text);
+      }
+
+      .theme-minimal .markdown-body h3 {
+        font-size: 1.1em;
+        font-weight: 600;
+        margin-top: 1em;
+        color: var(--text);
+        opacity: 0.9;
+      }
+
+      /* 引用块配色调整 */
+      .theme-minimal .markdown-body blockquote {
+        border-left: 2px solid var(--accent);
+        padding-left: 16px;
+        color: var(--gray);
+        font-style: italic;
+        margin: 16px 0;
+        background-color: rgba(52, 152, 219, 0.05);
+        padding: 12px 16px;
+        border-radius: 0 8px 8px 0;
+      }
+
+      /* 代码块背景调整 */
+      .theme-minimal .markdown-body pre {
+        background: #d6eaf8;
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+
+      /* 2. 📖 书卷风 */
+      .theme-serif {
+        --bg: #f2efe9;
+        --text: #2c2c2c;
+        --accent: #b85c5c;
+      }
+
+      .theme-serif .card-bg {
+        background-color: var(--bg);
+        height: 100%;
+        padding: 32px;
+        font-family: "Noto Serif SC", serif;
+        display: flex;
+        flex-direction: column;
+        background-image: linear-gradient(
+          to right,
+          rgba(0, 0, 0, 0.02) 1px,
+          transparent 1px
+        );
+        background-size: 100% 100%;
+      }
+
+      .theme-serif .markdown-body h1 {
+        font-size: 2em;
+        font-weight: 900;
+        color: var(--text);
+        margin-bottom: 30px;
+        letter-spacing: 2px;
+        border-left: 4px solid var(--accent);
+        padding-left: 16px;
+      }
+
+      .theme-serif .markdown-body h2 {
+        font-size: 1.2em;
+        font-weight: 700;
+        color: var(--accent);
+        margin-top: 20px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        padding-bottom: 4px;
+      }
+
+      .theme-serif .markdown-body h3 {
+        font-size: 1.15em;
+        font-weight: 700;
+        color: #333;
+        margin-top: 16px;
+        margin-bottom: 8px;
+      }
+
+      .theme-serif .markdown-body h4 {
+        font-size: 1.05em;
+        font-weight: 700;
+        color: #666;
+        margin-top: 12px;
+        margin-bottom: 4px;
+      }
+
+      .theme-serif .markdown-body blockquote {
+        font-family: "FangSong", serif;
+        color: #555;
+        background: rgba(255, 255, 255, 0.5);
+        padding: 10px;
+        font-size: 1.05em;
+        margin: 15px 0;
+      }
+
+      .theme-serif .markdown-body pre {
+        background: #fff;
+        border: 1px solid #ddd;
+        color: #444;
+      }
+
+      /* 3. ⚡ 冲击波 (Acid) */
+      .theme-acid {
+        --bg: #ccff00;
+        --text: #000;
+        --accent: #000;
+      }
+
+      .theme-acid .card-bg {
+        background-color: var(--bg);
+        height: 100%;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        font-family: "Noto Sans SC", sans-serif;
+      }
+
+      .theme-acid .markdown-body h1 {
+        font-size: 1.6em;
+        font-weight: 900;
+        border-bottom: 5px solid #000;
+        text-transform: uppercase;
+        margin: 0.6em 0;
+        line-height: 1.1;
+        font-family: sans-serif;
+      }
+
+      .theme-acid .markdown-body h2 {
+        font-size: 1.3em;
+        font-weight: 800;
+        background: #000;
+        color: var(--bg);
+        display: block;
+        width: fit-content;
+        padding: 4px 10px;
+        transform: skew(-5deg);
+        margin: 1em 0 0.5em;
+      }
+
+      .theme-acid .markdown-body h3 {
+        font-size: 1.15em;
+        font-weight: 800;
+        background: #fff;
+        border: 3px solid #000;
+        display: block;
+        width: fit-content;
+        padding: 2px 8px;
+        transform: skew(-5deg);
+        margin: 1em 0 0.4em;
+        box-shadow: 3px 3px 0px #000;
+      }
+
+      .theme-acid .markdown-body h4 {
+        font-size: 1em;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: fit-content;
+        margin: 0.8em 0 0.2em;
+      }
+
+      .theme-acid .markdown-body h4::before {
+        content: "";
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #000;
+      }
+
+      .theme-acid .markdown-body blockquote {
+        border-left: 6px solid #000;
+        background: rgba(255, 255, 255, 0.5);
+        padding: 12px;
+        font-weight: bold;
+        border: 2px solid #000;
+        box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+      }
+
+      .theme-acid .markdown-body pre {
+        background: #000;
+        color: var(--bg);
+        border: 2px solid #000;
+      }
+
+      /* 4. 🔵 科技风 (Tech) */
+      .theme-tech {
+        --bg: #0f172a;
+        --text: #e2e8f0;
+        --accent: #3b82f6;
+      }
+
+      .theme-tech .card-bg {
+        background: var(--bg);
+        height: 100%;
+        padding: 24px;
+        color: var(--text);
+        position: relative;
+        font-family: "Inter", sans-serif;
+      }
+
+      .theme-tech .grid-bg {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+      }
+
+      .theme-tech .markdown-body h1 {
+        font-size: 1.6em;
+        font-weight: 800;
+        background: linear-gradient(to right, #60a5fa, #a78bfa);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+        border-bottom: 4px solid #7ea4f8;
+      }
+
+      .theme-tech .markdown-body blockquote {
+        border-left: 4px solid #8b5cf6;
+        background: rgba(139, 92, 246, 0.1);
+        color: #d8b4fe;
+        border-bottom: 2px solid #000;
+      }
+
+      .theme-tech .markdown-body pre {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid #3b82f6;
+      }
+
+      .page-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: var(--text, #333);
+        text-transform: uppercase;
+      }
+
+      .page-meta .badge {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.06);
+        color: inherit;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      /* 5. ✨ 轻柔风 (Soft Base) */
+      .theme-soft {
+        --bg: #f7f4ee;
+        --text: #2d3436;
+        --gray: #6b7280;
+        --border: #e5ded3;
+        --accent: #e67e22;
+      }
+
+      .theme-soft .card-bg {
+        background-color: var(--bg);
+        height: 100%;
+        padding: 32px;
+        font-family: "Inter", "Noto Sans SC", sans-serif;
+        display: flex;
+        flex-direction: column;
+        color: var(--text);
+      }
+
+      .theme-soft .markdown-body h1 {
+        font-size: 1.55em;
+        font-weight: 800;
+        margin-bottom: 0.8em;
+        color: var(--text);
+        border-bottom: 3px solid var(--accent);
+        padding-bottom: 8px;
+      }
+
+      .theme-soft .markdown-body h2 {
+        font-size: 1.2em;
+        font-weight: 700;
+        margin-top: 1.2em;
+        color: var(--text);
+      }
+
+      .theme-soft .markdown-body h3 {
+        font-size: 1.1em;
+        font-weight: 600;
+        margin-top: 1em;
+        color: var(--text);
+      }
+
+      .theme-soft .markdown-body blockquote {
+        border-left: 3px solid var(--accent);
+        padding-left: 12px;
+        color: var(--gray);
+        background: rgba(0, 0, 0, 0.03);
+        margin: 14px 0;
+        border-radius: 0 8px 8px 0;
+      }
+
+      .theme-soft .markdown-body pre {
+        background: rgba(0, 0, 0, 0.04);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+      }
+
+      .theme-cream {
+        --bg: #fff7ee;
+        --text: #3c2f25;
+        --gray: #7c6a5a;
+        --border: #f0e0d1;
+        --accent: #e67e22;
+      }
+
+      .theme-sage {
+        --bg: #eff7f1;
+        --text: #1f4d3f;
+        --gray: #4b6b5f;
+        --border: #d7eadf;
+        --accent: #2f8f6b;
+      }
+
+      .theme-rose {
+        --bg: #fff0f6;
+        --text: #6b1f3a;
+        --gray: #8c4c64;
+        --border: #f7d9e7;
+        --accent: #d9487f;
+      }
+
+      .theme-mono {
+        --bg: #f7f7f7;
+        --text: #111827;
+        --gray: #4b5563;
+        --border: #e5e7eb;
+        --accent: #111827;
+      }
+
+      .theme-sunset {
+        --bg: #fff5ef;
+        --text: #3c2f2f;
+        --gray: #6b5a5a;
+        --border: #f1ded6;
+        --accent: #ef6b47;
+      }
+
+      .theme-editorial .card-bg {
+        background: #fcfaf6;
+        color: #1f2937;
+        height: 100%;
+        padding: 34px 30px;
+        display: flex;
+        flex-direction: column;
+        font-family: "Noto Serif SC", serif;
+      }
+
+      .theme-editorial .markdown-body h1 {
+        font-size: 1.72em;
+        font-weight: 900;
+        line-height: 1.28;
+        margin-bottom: 0.8em;
+        letter-spacing: 0.01em;
+        border-bottom: 1px solid rgba(31, 41, 55, 0.18);
+        padding-bottom: 10px;
+      }
+
+      .theme-editorial .markdown-body h2 {
+        font-size: 1.16em;
+        font-weight: 700;
+        margin: 1.1em 0 0.45em;
+        color: #374151;
+      }
+
+      .theme-editorial .markdown-body h3 {
+        font-size: 1.02em;
+        font-weight: 700;
+        margin: 0.9em 0 0.35em;
+        color: #6b7280;
+      }
+
+      .theme-editorial .markdown-body blockquote {
+        margin: 16px 0;
+        padding: 10px 14px;
+        border-left: 3px solid #9ca3af;
+        background: rgba(17, 24, 39, 0.04);
+        color: #4b5563;
+      }
+
+      .theme-editorial .markdown-body pre {
+        background: #f3f4f6;
+        color: #111827;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+      }
+
+      .theme-nyt .card-bg {
+        background: #f8f5ee;
+        color: #1f2937;
+        height: 100%;
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        font-family: "Noto Serif SC", serif;
+      }
+
+      .theme-nyt .markdown-body h1 {
+        font-size: 1.82em;
+        font-weight: 900;
+        line-height: 1.22;
+        margin-bottom: 0.75em;
+      }
+
+      .theme-nyt .markdown-body h2 {
+        font-size: 1.18em;
+        font-weight: 700;
+        margin: 1.05em 0 0.4em;
+        border-left: 4px solid #111827;
+        padding-left: 10px;
+      }
+
+      .theme-nyt .markdown-body h3 {
+        font-size: 1.02em;
+        font-weight: 700;
+        color: #4b5563;
+      }
+
+      .theme-nyt .markdown-body blockquote {
+        margin: 16px 0;
+        padding-left: 14px;
+        border-left: 2px solid #9ca3af;
+        color: #4b5563;
+        font-style: italic;
+      }
+
+      .theme-ft .card-bg {
+        background: #f6e9db;
+        color: #362312;
+        height: 100%;
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        font-family: "Noto Serif SC", serif;
+      }
+
+      .theme-ft .markdown-body h1 {
+        font-size: 1.68em;
+        font-weight: 800;
+        line-height: 1.24;
+        margin-bottom: 0.75em;
+        color: #5b2b14;
+      }
+
+      .theme-ft .markdown-body h2 {
+        font-size: 1.15em;
+        font-weight: 700;
+        margin: 1.05em 0 0.4em;
+        color: #8a3f1a;
+      }
+
+      .theme-ft .markdown-body h3 {
+        font-size: 1em;
+        font-weight: 700;
+        color: #9a5b36;
+      }
+
+      .theme-ft .markdown-body blockquote {
+        margin: 14px 0;
+        padding: 10px 14px;
+        background: rgba(138, 63, 26, 0.08);
+        border-left: 3px solid #c97b4b;
+        color: #6b3b1d;
+      }
+
+      .theme-apple .card-bg {
+        background: #ffffff;
+        color: #111827;
+        height: 100%;
+        padding: 34px;
+        display: flex;
+        flex-direction: column;
+        font-family: "Inter", "Noto Sans SC", sans-serif;
+      }
+
+      .theme-apple .markdown-body h1 {
+        font-size: 1.7em;
+        font-weight: 800;
+        line-height: 1.2;
+        margin-bottom: 0.7em;
+        letter-spacing: -0.03em;
+      }
+
+      .theme-apple .markdown-body h2 {
+        font-size: 1.18em;
+        font-weight: 700;
+        margin: 1em 0 0.42em;
+      }
+
+      .theme-apple .markdown-body h3 {
+        font-size: 1.02em;
+        font-weight: 600;
+        color: #6b7280;
+      }
+
+      .theme-apple .markdown-body blockquote {
+        margin: 16px 0;
+        padding: 12px 14px;
+        background: #f3f4f6;
+        border-radius: 12px;
+        color: #4b5563;
+      }
+
+      .theme-apple .markdown-body pre {
+        background: #111827;
+        color: #f9fafb;
+        border-radius: 12px;
+      }
+
+      .theme-claude .card-bg {
+        background: #faf6f0;
+        color: #3f3428;
+        height: 100%;
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        font-family: "Inter", "Noto Sans SC", sans-serif;
+      }
+
+      .theme-claude .markdown-body h1 {
+        font-size: 1.62em;
+        font-weight: 800;
+        line-height: 1.28;
+        margin-bottom: 0.75em;
+        color: #7c4f2d;
+      }
+
+      .theme-claude .markdown-body h2 {
+        font-size: 1.16em;
+        font-weight: 700;
+        margin: 1.05em 0 0.42em;
+        border-left: 4px solid #c47a45;
+        padding-left: 10px;
+      }
+
+      .theme-claude .markdown-body h3 {
+        font-size: 1.02em;
+        font-weight: 700;
+        color: #8c6a50;
+      }
+
+      .theme-claude .markdown-body blockquote {
+        margin: 16px 0;
+        padding: 12px 14px;
+        background: #f4eadf;
+        border-left: 3px solid #c47a45;
+        border-radius: 10px;
+      }
+
+      .theme-wired .card-bg {
+        background: linear-gradient(180deg, #0b1220 0%, #111827 100%);
+        color: #e5e7eb;
+        height: 100%;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        font-family: "Inter", "Noto Sans SC", sans-serif;
+      }
+
+      .theme-wired .markdown-body h1 {
+        font-size: 1.74em;
+        font-weight: 900;
+        line-height: 1.16;
+        margin-bottom: 0.7em;
+        color: #f8fafc;
+        text-transform: uppercase;
+      }
+
+      .theme-wired .markdown-body h2 {
+        font-size: 1.15em;
+        font-weight: 800;
+        margin: 1em 0 0.4em;
+        display: inline-block;
+        padding: 4px 10px;
+        background: #38bdf8;
+        color: #0f172a;
+      }
+
+      .theme-wired .markdown-body h3 {
+        font-size: 1em;
+        font-weight: 700;
+        color: #67e8f9;
+      }
+
+      .theme-wired .markdown-body blockquote {
+        margin: 16px 0;
+        padding: 12px 14px;
+        background: rgba(103, 232, 249, 0.08);
+        border-left: 3px solid #22d3ee;
+        color: #cbd5e1;
+      }
+
+      .theme-wired .markdown-body pre {
+        background: #020617;
+        color: #e2e8f0;
+        border: 1px solid rgba(34, 211, 238, 0.28);
+        border-radius: 10px;
+      }
+
+      .theme-coder .card-bg {
+        background: #0b1020;
+        color: #d1fae5;
+        height: 100%;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        font-family: "IBM Plex Mono", "Menlo", monospace;
+      }
+
+      .theme-coder .markdown-body h1 {
+        font-size: 1.58em;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 0.75em;
+        color: #34d399;
+      }
+
+      .theme-coder .markdown-body h2 {
+        font-size: 1.1em;
+        font-weight: 700;
+        margin: 1em 0 0.4em;
+        color: #93c5fd;
+      }
+
+      .theme-coder .markdown-body h3 {
+        font-size: 0.98em;
+        font-weight: 700;
+        color: #fbbf24;
+      }
+
+      .theme-coder .markdown-body p,
+      .theme-coder .markdown-body li {
+        color: #d1fae5;
+      }
+
+      .theme-coder .markdown-body blockquote {
+        margin: 16px 0;
+        padding: 10px 14px;
+        background: rgba(52, 211, 153, 0.08);
+        border-left: 3px solid #34d399;
+        color: #a7f3d0;
+      }
+
+      .theme-coder .markdown-body pre {
+        background: #020617;
+        color: #bfdbfe;
+        border: 1px solid rgba(52, 211, 153, 0.3);
+        border-radius: 10px;
+      }
+
+      .style-card {
+        border: 1px solid rgba(226, 232, 240, 0.95);
+        border-radius: 14px;
+        padding: 8px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+        display: grid;
+        gap: 6px;
+        cursor: pointer;
+        transition: all 180ms ease;
+        text-align: left;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+      }
+
+      .style-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+      }
+
+      .style-card.active {
+        border-color: #111827;
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+      }
+
+      .style-card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .style-card-name {
+        font-size: 11px;
+        font-weight: 800;
+        color: #111827;
+      }
+
+      .style-card-tag {
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 3px 6px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid rgba(226, 232, 240, 0.95);
+        color: #64748b;
+      }
+
+      .style-card-sample {
+        min-height: 84px;
+        max-height: 84px;
+        border-radius: 12px;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        padding: 10px;
+        display: grid;
+        align-content: start;
+        gap: 6px;
+        overflow: hidden;
+      }
+
+      .style-card-sample h4 {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.25;
+      }
+
+      .style-card-sample p {
+        margin: 0;
+        font-size: 10px;
+        line-height: 1.4;
+      }
+
+      .style-card-meta {
+        font-size: 10px;
+        line-height: 1.35;
+        color: #64748b;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      #left-panel,
+      #right-panel {
+        background: var(--panel) !important;
+        border-color: var(--line) !important;
+        box-shadow: var(--shadow-soft) !important;
+        backdrop-filter: blur(18px);
+      }
+
+      #left-panel > div:first-child,
+      #right-panel > div:first-child {
+        background: rgba(255, 255, 255, 0.82) !important;
+        border-color: var(--line) !important;
+        min-height: 52px;
+      }
+
+      #left-panel .flex-1.p-4,
+      #right-panel .flex-1.overflow-y-auto {
+        background: linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(250,249,247,0.56) 100%);
+      }
+
+      #left-panel .editor-pane,
+      #right-panel textarea,
+      #right-panel input[type="text"],
+      #right-panel select {
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.78), 0 10px 18px rgba(17, 24, 39, 0.03);
+      }
+
+      #left-panel textarea,
+      #right-panel textarea,
+      #right-panel input[type="text"],
+      #right-panel select,
+      #right-panel input[type="range"] {
+        border-color: rgba(23, 25, 28, 0.08) !important;
+      }
+
+      #right-panel .bg-blue-50,
+      #right-panel .bg-gray-50,
+      #right-panel .hover\:bg-gray-100:hover,
+      #right-panel .hover\:bg-blue-50:hover {
+        background: rgba(255,255,255,0.78) !important;
+      }
+
+      #right-panel .border-blue-100,
+      #right-panel .border-blue-200,
+      #right-panel .border-gray-200,
+      #right-panel .border-gray-100 {
+        border-color: rgba(23, 25, 28, 0.08) !important;
+      }
+
+      #left-panel button,
+      #right-panel button:not(.toggle-btn),
+      #right-panel label,
+      #toolbar-actions button {
+        transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background 140ms ease, color 140ms ease;
+      }
+
+      #left-panel button:hover,
+      #right-panel button:not(.toggle-btn):hover,
+      #right-panel label:hover,
+      #toolbar-actions button:hover {
+        transform: translateY(-1px);
+      }
+
+      #left-panel .text-green-600,
+      #right-panel .text-blue-500,
+      #right-panel .text-red-500,
+      #right-panel .text-red-600 {
+        border-radius: 12px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.78);
+      }
+
+      #left-panel input[type="range"],
+      #right-panel input[type="range"] {
+        appearance: none;
+        -webkit-appearance: none;
+        height: 6px !important;
+        border: none !important;
+        border-radius: 999px !important;
+        background: linear-gradient(90deg, rgba(242,95,58,0.18), rgba(23,25,28,0.08)) !important;
+        box-shadow: inset 0 1px 2px rgba(17,24,39,0.08) !important;
+      }
+
+      #left-panel input[type="range"]::-webkit-slider-thumb,
+      #right-panel input[type="range"]::-webkit-slider-thumb {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), #ff8a68);
+        border: 2px solid #fff;
+        box-shadow: 0 6px 14px rgba(242, 95, 58, 0.26);
+        cursor: pointer;
+      }
+
+      #left-panel input[type="checkbox"],
+      #right-panel input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 8px;
+        border: 1px solid rgba(23, 25, 28, 0.12);
+        background: rgba(255,255,255,0.9);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+        display: inline-grid;
+        place-items: center;
+        cursor: pointer;
+        transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+      }
+
+      #left-panel input[type="checkbox"]::after,
+      #right-panel input[type="checkbox"]::after {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 4px;
+        background: linear-gradient(135deg, var(--accent), #ff8a68);
+        transform: scale(0);
+        transition: transform 120ms ease;
+      }
+
+      #left-panel input[type="checkbox"]:checked,
+      #right-panel input[type="checkbox"]:checked {
+        border-color: rgba(242, 95, 58, 0.28);
+        box-shadow: 0 0 0 3px rgba(242, 95, 58, 0.1);
+      }
+
+      #left-panel input[type="checkbox"]:checked::after,
+      #right-panel input[type="checkbox"]:checked::after {
+        transform: scale(1);
+      }
+
+      #toolbar-actions {
+        background: rgba(255, 255, 255, 0.88) !important;
+        border: 1px solid rgba(255, 255, 255, 0.7) !important;
+        box-shadow: 0 24px 48px rgba(17, 24, 39, 0.12) !important;
+        animation: modalInSoft 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      #toolbar-toggle {
+        background: linear-gradient(135deg, var(--ink), #414751) !important;
+        border-color: rgba(255,255,255,0.32) !important;
+        box-shadow: 0 18px 32px rgba(17, 24, 39, 0.18) !important;
+      }
+
+      main.flex-1.bg-\[\#E5E5E5\] {
+        background:
+          linear-gradient(180deg, rgba(238, 235, 229, 0.9), rgba(229, 229, 229, 0.82)) !important;
+      }
+
+      #scroll-container {
+        background: transparent !important;
+      }
+
+      .checklist,
+      .flow-levels,
+      .flow-timeline {
+        animation: fadeUpSoft 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      @media (max-width: 960px) {
+        .header-actions {
+          justify-content: flex-start;
+        }
+      }
+
+      #left-panel .h-12,
+      #right-panel .h-12 {
+        min-height: 52px;
+      }
+
+      #right-panel .space-y-5 > div,
+      #left-panel .space-y-4 > div,
+      #left-panel .space-y-3 > div {
+        will-change: transform;
+      }
+    </style>
+  </head>
+
+  <body class="flex flex-col h-screen w-full text-gray-800 select-none overflow-hidden">
+    <div class="global-header">
+      <div class="global-left">
+        <span class="global-badge">R</span>
+        <span class="page-title">图文生成器</span>
+        <select id="pageSwitch" class="page-switch" aria-label="切换页面">
+          <option value="./cover.html">封面生成器</option>
+          <option value="./note.html">图文生成器</option>
+          <option value="./md.html">公众号编辑器</option>
+          <option value="../index.html">返回首页</option>
+        </select>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn" id="btnShortcuts">
+          <i data-lucide="keyboard" size="14"></i> 快捷键
+        </button>
+        <button class="header-btn" id="btnFlow">
+          <i data-lucide="trending-up" size="14"></i> 推流机制
+        </button>
+        <button class="header-btn danger" id="btnClearAll">
+          <i data-lucide="trash-2" size="14"></i> 清空
+        </button>
+      </div>
+    </div>
+    <div class="shortcut-mask" id="shortcutMask">
+      <div class="shortcut-modal">
+        <div class="shortcut-header">
+          快捷键
+          <button class="shortcut-close" id="shortcutClose">×</button>
+        </div>
+        <div class="shortcut-body">
+          <div class="shortcut-item">
+            <span>导出图文</span>
+            <span class="shortcut-key">Ctrl / ⌘ + E</span>
+          </div>
+          <div class="shortcut-item">
+            <span>清空内容</span>
+            <span class="shortcut-key">Ctrl / ⌘ + ⌫</span>
+          </div>
+          <div class="shortcut-item">
+            <span>打开快捷键</span>
+            <span class="shortcut-key">?</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" id="flow-modal">
+      <div class="modal flow-modal-content">
+        <div class="modal-header">
+          <h4>📈 小红书推流机制</h4>
+          <button class="shortcut-close" id="flowClose">×</button>
+        </div>
+        <div class="modal-body flow-body">
+          <div class="flow-section">
+            <div class="flow-section-title">⏰ 流量推送时间线</div>
+            <div class="flow-timeline">
+              <div class="flow-item">
+                <div class="flow-time">发布后 2小时</div>
+                <div class="flow-desc">初始曝光，推给目标群体</div>
+                <div class="flow-tip">💡 选对发布时间：上午10点 / 晚上10点</div>
+              </div>
+              <div class="flow-item">
+                <div class="flow-time">发布后 24小时</div>
+                <div class="flow-desc">优质笔记加权（CES系数）</div>
+                <div class="flow-tip">💡 及时回复评论，提升互动</div>
+              </div>
+              <div class="flow-item">
+                <div class="flow-time">发布后 7天</div>
+                <div class="flow-desc">分水岭：数据好加权，差就凉</div>
+                <div class="flow-tip">💡 关键期！持续关注数据</div>
+              </div>
+              <div class="flow-item">
+                <div class="flow-time">发布后 30天</div>
+                <div class="flow-desc">关闭自然推流，只剩搜索展示</div>
+                <div class="flow-tip">💡 标题要有搜索关键词</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-section">
+            <div class="flow-section-title">👀 流量池等级</div>
+            <div class="flow-levels">
+              <div class="flow-level level-1">
+                <div class="level-range">1级：0-100</div>
+                <div class="level-issue">可能违规或内容太差</div>
+              </div>
+              <div class="flow-level level-2">
+                <div class="level-range">2级：200-500</div>
+                <div class="level-issue">标题封面一般，需优化</div>
+              </div>
+              <div class="flow-level level-3">
+                <div class="level-range">3级：3k-5k</div>
+                <div class="level-issue">有干货但互动一般</div>
+              </div>
+              <div class="flow-level level-4">
+                <div class="level-range">4级：1w-2w</div>
+                <div class="level-issue">热门备选，进入人工审核</div>
+              </div>
+              <div class="flow-level level-5">
+                <div class="level-range">5级：10w-20w</div>
+                <div class="level-issue">热门笔记，内容有稀缺性</div>
+              </div>
+              <div class="flow-level level-6">
+                <div class="level-range">6级：100w+</div>
+                <div class="level-issue">大热门，头部达人</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-section">
+            <div class="flow-section-title">📊 CES评分公式</div>
+            <div class="ces-formula">
+              <span class="ces-item">点赞 ×1</span>
+              <span class="ces-plus">+</span>
+              <span class="ces-item">收藏 ×1</span>
+              <span class="ces-plus">+</span>
+              <span class="ces-item highlight">评论 ×4</span>
+              <span class="ces-plus">+</span>
+              <span class="ces-item highlight">转发 ×4</span>
+            </div>
+            <div class="ces-tip">评论和转发权重最高！引导用户评论很重要</div>
+          </div>
+
+          <div class="flow-section">
+            <div class="flow-section-title">✅ 发布前检查清单</div>
+            <div class="checklist">
+              <label class="check-item"><input type="checkbox"> 标题有搜索关键词</label>
+              <label class="check-item"><input type="checkbox"> 封面图清晰有吸引力</label>
+              <label class="check-item"><input type="checkbox"> 内容末尾有互动引导</label>
+              <label class="check-item"><input type="checkbox"> 已检测违禁词</label>
+              <label class="check-item"><input type="checkbox"> 发布时间：上午10点 / 晚上10点</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="header-btn" id="flowOk">知道了</button>
+        </div>
+      </div>
+    </div>
+    <div class="page-body">
+    <aside
+      id="left-panel"
+      class="bg-white border-r border-gray-200 flex flex-col z-20 shadow-xl shrink-0 panel-transition relative"
+      style="width: 350px"
+    >
+      <div
+        class="h-12 border-b border-gray-100 flex items-center justify-between px-4 shrink-0 bg-white"
+      >
+        <h2 class="font-bold text-sm flex items-center gap-2">
+          <i data-lucide="pen-tool" size="14"></i> 正文编辑
+        </h2>
+        <button
+          onclick="pasteFromClipboard()"
+          class="text-green-600 hover:bg-green-50 px-2 py-1 rounded text-xs flex items-center gap-1 transition-colors border border-green-200"
+          title="读取剪贴板"
+        >
+          <i data-lucide="clipboard-paste" size="12"></i> 粘贴
+        </button>
+      </div>
+
+      <div class="flex-1 p-4 flex flex-col h-full overflow-hidden">
+        <div class="mb-2 flex justify-between items-center">
+          <span class="text-xs text-gray-400"
+            >Markdown / 图片粘贴(Ctrl+V)</span
+          >
+          <label
+            class="cursor-pointer text-blue-500 hover:bg-blue-50 px-2 py-1 rounded text-xs flex items-center gap-1 transition-colors border border-blue-200"
+          >
+            <i data-lucide="image-plus" size="12"></i> 插入图片
+            <input
+              type="file"
+              accept="image/*"
+              class="hidden"
+              onchange="handleBodyImageUpload(this)"
+            />
+          </label>
+        </div>
+
+        <textarea
+          id="input-content"
+          class="editor-pane flex-1 w-full bg-gray-50 border border-gray-200 rounded-lg p-3 font-mono text-xs leading-relaxed resize-none shadow-sm focus:bg-white focus:border-black focus:ring-1 focus:ring-black transition-all outline-none"
+          oninput="updatePreview()"
+          spellcheck="false"
+        >
+# 这是一个一级标题
+
+## 这是一个二级标题
+
+这里是正文段落。如果需要强调，可以使用**加粗文字**。
+
+### 常用功能演示：
+
+**1. 列表**
+- 观点一：这是第一个观点
+- 观点二：这是第二个观点
+
+**2. 引用块**
+> “这是引用块”
+
+@---
+
+**3. 如何分页？**
+在需要切分的地方输入 `@` 加上三个减号
+
+**4. 如何插入图片？**
+- 方法A：直接截图，在这里按 Ctrl+V 粘贴
+- 方法B：点击上方的“插入图片”按钮
+</textarea
+        >
+        <div class="mt-2 text-[10px] text-gray-400 text-center">
+          输入 @ + --- 可强制分页
+        </div>
+      </div>
+
+      <div
+        id="left-toggle"
+        class="toggle-btn"
+        onclick="togglePanel('left')"
+        title="折叠/展开"
+      >
+        <i data-lucide="chevron-left" size="16"></i>
+      </div>
+    </aside>
+
+    <div id="resizer-left" class="resizer"></div>
+
+    <main
+      class="flex-1 bg-[#E5E5E5] relative overflow-hidden flex flex-col group/preview min-w-0"
+    >
+      <div
+        class="absolute bottom-6 right-6 z-30 flex flex-col items-end pointer-events-none"
+      >
+        <div
+          id="toolbar-actions"
+          class="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-white/60 flex flex-col gap-2 mb-3 transform origin-bottom-right scale-0 opacity-0 transition-all duration-300 ease-out"
+        >
+          <div class="flex items-center bg-gray-50 rounded-lg p-1">
+            <button
+              onclick="
+                changeZoom(-0.1);
+                hideToolbar();
+              "
+              class="w-8 h-8 flex items-center justify-center hover:bg-white rounded-md text-gray-600 shadow-sm active:scale-90"
+            >
+              <i data-lucide="minus" size="16"></i>
+            </button>
+            <span
+              id="zoom-val"
+              class="w-10 text-center font-mono text-xs font-bold text-gray-600"
+              >100%</span
+            >
+            <button
+              onclick="
+                changeZoom(0.1);
+                hideToolbar();
+              "
+              class="w-8 h-8 flex items-center justify-center hover:bg-white rounded-md text-gray-600 shadow-sm active:scale-90"
+            >
+              <i data-lucide="plus" size="16"></i>
+            </button>
+          </div>
+          <button
+            onclick="
+              toggleLayout();
+              hideToolbar();
+            "
+            id="layout-btn"
+            class="w-full h-8 flex items-center justify-center bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 rounded-lg text-xs font-bold transition-all active:scale-95 gap-2"
+          >
+            <i data-lucide="layout-grid" size="16"></i> <span>切换视图</span>
+          </button>
+        </div>
+
+        <button
+          onclick="toggleToolbar()"
+          id="toolbar-toggle"
+          class="pointer-events-auto w-12 h-12 bg-black text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-90 transition-all duration-200 border-2 border-white/20"
+        >
+          <i data-lucide="settings-2" size="20"></i>
+        </button>
+      </div>
+
+      <div
+        id="scroll-container"
+        class="flex-1 overflow-y-auto p-8 w-full custom-scrollbar flex justify-center"
+      >
+        <div
+          id="preview-canvas"
+          class="flex flex-col items-center gap-8 origin-top transition-transform duration-200 pb-32"
+        ></div>
+      </div>
+    </main>
+
+    <div id="resizer-right" class="resizer"></div>
+
+    <aside
+      id="right-panel"
+      class="bg-white border-l border-gray-200 flex flex-col z-20 shadow-xl shrink-0 panel-transition relative"
+      style="width: 272px"
+    >
+      <div
+        class="h-12 border-b border-gray-100 flex items-center justify-between px-4 shrink-0 bg-white"
+      >
+        <div class="flex items-center gap-2">
+          <div
+            class="w-6 h-6 bg-[#FE2C55] rounded flex items-center justify-center text-white font-bold text-xs"
+          >
+            R
+          </div>
+          <h1 class="font-bold text-sm">参数设置</h1>
+        </div>
+        <button
+          onclick="downloadAll()"
+          class="bg-black hover:bg-gray-800 text-white text-xs px-3 py-1.5 rounded font-bold flex items-center gap-1 transition-all shadow-sm"
+        >
+          <i data-lucide="download" size="12"></i> 导出JPG
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar">
+        <div>
+          <h3
+            class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3"
+          >
+            风格主题
+          </h3>
+          <div class="grid grid-cols-1 gap-2.5" id="style-grid"></div>
+        </div>
+
+        <div class="space-y-4 pt-4 border-t border-gray-100">
+          <h3
+            class="text-xs font-black text-gray-400 uppercase tracking-widest"
+          >
+            封面信息
+          </h3>
+
+          <div class="bg-blue-50 border border-blue-100 rounded-lg p-2">
+            <div class="flex items-center gap-2">
+              <label
+                class="flex-1 cursor-pointer bg-white border border-blue-200 text-blue-500 text-xs font-bold py-1.5 px-2 rounded hover:bg-blue-50 flex items-center justify-center gap-1 transition-colors"
+              >
+                <i data-lucide="image" size="12"></i> 换图
+                <input
+                  type="file"
+                  id="cover-image-upload"
+                  accept="image/*"
+                  class="hidden"
+                  onchange="handleImageUpload(this)"
+                />
+              </label>
+              <button
+                onclick="clearImage()"
+                class="bg-white border border-red-200 text-red-500 p-1.5 rounded hover:bg-red-50"
+                title="移除图片"
+              >
+                <i data-lucide="trash-2" size="14"></i>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-500 mb-1"
+              >封面大标题</label
+            >
+            <textarea
+              id="input-title"
+              rows="2"
+              class="w-full bg-gray-50 border border-gray-200 rounded px-2 py-1.5 text-xs font-bold resize-none focus:bg-white focus:ring-1 focus:ring-black outline-none"
+              oninput="updatePreview()"
+            >小红书标题</textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-500 mb-1"
+              >封面简介</label
+            >
+            <textarea
+              id="input-intro"
+              rows="2"
+              class="w-full bg-gray-50 border border-gray-200 rounded px-2 py-1.5 text-xs resize-none focus:bg-white focus:ring-1 focus:ring-black outline-none"
+              oninput="updatePreview()"
+            ></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-bold text-gray-500 mb-1"
+                >日期</label
+              ><input
+                type="text"
+                id="input-date"
+                class="w-full bg-gray-50 border border-gray-200 rounded px-2 py-1.5 text-xs"
+                value="2026/02/10"
+                oninput="updatePreview()"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-500 mb-1"
+                >作者</label
+              ><input
+                type="text"
+                id="input-tag"
+                class="w-full bg-gray-50 border border-gray-200 rounded px-2 py-1.5 text-xs"
+                value="@小红书"
+                oninput="updatePreview()"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-4 pt-4 border-t border-gray-100">
+          <h3
+            class="text-xs font-black text-gray-400 uppercase tracking-widest"
+          >
+            外观参数
+          </h3>
+
+          <div>
+            <label class="text-xs font-bold text-gray-600 mb-1 block"
+              >画布尺寸</label
+            >
+            <div class="relative">
+              <select
+                id="canvas-size"
+                class="w-full bg-gray-50 border border-gray-200 text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-black outline-none appearance-none cursor-pointer"
+                onchange="updatePreview()"
+              >
+                <option value="375x500">📕 小红书 (3:4)</option>
+                <option value="375x667">📱 手机海报 (9:16)</option>
+              </select>
+              <i
+                data-lucide="chevron-down"
+                size="14"
+                class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+              ></i>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-xs text-gray-500 mb-1">
+                <span>封面字号</span><span id="title-size-val">48px</span>
+              </div>
+              <input
+                type="range"
+                id="title-size"
+                min="30"
+                max="80"
+                value="48"
+                class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+                oninput="updatePreview()"
+              />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs text-gray-500 mb-1">
+                <span>正文字号</span><span id="body-size-val">15px</span>
+              </div>
+              <input
+                type="range"
+                id="body-size"
+                min="8"
+                max="24"
+                value="15"
+                class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+                oninput="updatePreview()"
+              />
+            </div>
+
+            <div class="pt-2 border-t border-gray-100">
+              <div class="flex justify-between text-xs text-gray-500 mb-1">
+                <span>标题整体 (H1-H4)</span
+                ><span id="heading-scale-val">26px</span>
+              </div>
+              <input
+                type="range"
+                id="heading-scale"
+                min="20"
+                max="60"
+                value="26"
+                class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+                oninput="updatePreview()"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3 pt-4 border-t border-gray-100">
+          <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest">
+            分页设置
+          </h3>
+          <label
+            class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+          >
+            <span class="text-sm text-gray-700">自动分页</span>
+            <input
+              type="checkbox"
+              id="auto-paginate"
+              class="w-5 h-5 rounded text-black focus:ring-black"
+              onchange="updatePreview()"
+              checked
+            />
+          </label>
+          <p class="text-[10px] text-gray-400 text-center">
+            关闭后仅使用 @--- 手动分页
+          </p>
+        </div>
+
+        <div class="space-y-3 pt-4 border-t border-gray-100">
+          <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest">
+            图片信息
+          </h3>
+          <label
+            class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+          >
+            <span class="text-sm text-gray-700">显示时间</span>
+            <input
+              type="checkbox"
+              id="show-date"
+              class="w-5 h-5 rounded text-black focus:ring-black"
+              onchange="updatePreview()"
+              checked
+            />
+          </label>
+          <label
+            class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+          >
+            <span class="text-sm text-gray-700">显示页数</span>
+            <input
+              type="checkbox"
+              id="show-page-num"
+              class="w-5 h-5 rounded text-black focus:ring-black"
+              onchange="updatePreview()"
+              checked
+            />
+          </label>
+        </div>
+
+        <div id="image-manager" class="space-y-4 pt-4 border-t border-gray-100">
+          <h3
+            class="text-xs font-black text-gray-400 uppercase tracking-widest"
+          >
+            图片管理
+          </h3>
+          <div
+            id="image-list"
+            class="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar"
+          ></div>
+          <p class="text-[10px] text-gray-400 text-center">
+            点击图片可复制引用语法
+          </p>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-gray-100 text-center pb-6">
+          <p
+            class="text-[10px] text-gray-400 font-mono leading-relaxed opacity-70"
+          >
+            小红书图文生成器<br />
+          </p>
+        </div>
+      </div>
+
+      <div
+        id="right-toggle"
+        class="toggle-btn"
+        onclick="togglePanel('right')"
+        title="折叠/展开"
+      >
+        <i data-lucide="chevron-right" size="16"></i>
+      </div>
+    </aside>
+
+    </div>
+    <script>
+      const shortcutMask = document.getElementById("shortcutMask");
+      const btnShortcuts = document.getElementById("btnShortcuts");
+      const btnClearAll = document.getElementById("btnClearAll");
+      const shortcutClose = document.getElementById("shortcutClose");
+      const flowModal = document.getElementById("flow-modal");
+      const btnFlow = document.getElementById("btnFlow");
+      const flowClose = document.getElementById("flowClose");
+      const flowOk = document.getElementById("flowOk");
+
+      function openShortcuts() {
+        shortcutMask.style.display = "flex";
+      }
+
+      function closeShortcuts() {
+        shortcutMask.style.display = "none";
+      }
+
+      btnShortcuts?.addEventListener("click", openShortcuts);
+      shortcutClose?.addEventListener("click", closeShortcuts);
+      shortcutMask?.addEventListener("click", (e) => {
+        if (e.target === shortcutMask) closeShortcuts();
+      });
+
+      btnClearAll?.addEventListener("click", () => {
+        if (confirm("确定清空当前图文内容吗？")) {
+          resetAllContent();
+        }
+      });
+
+      function openFlowModal() {
+        flowModal?.classList.add("show");
+      }
+
+      function closeFlowModal() {
+        flowModal?.classList.remove("show");
+      }
+
+      btnFlow?.addEventListener("click", openFlowModal);
+      flowClose?.addEventListener("click", closeFlowModal);
+      flowOk?.addEventListener("click", closeFlowModal);
+      flowModal?.addEventListener("click", (e) => {
+        if (e.target === flowModal) closeFlowModal();
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "e") {
+          e.preventDefault();
+          downloadAll();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === "Backspace") {
+          e.preventDefault();
+          if (confirm("确定清空当前图文内容吗？")) resetAllContent();
+        }
+        if (e.key === "?") {
+          e.preventDefault();
+          openShortcuts();
+        }
+      });
+      const pageSwitch = document.getElementById("pageSwitch");
+      if (pageSwitch) {
+        pageSwitch.value = "./note.html";
+        pageSwitch.addEventListener("change", (e) => {
+          const target = e.target.value;
+          if (target) window.location.href = target;
+        });
+      }
+
+      function resetAllContent() {
+        state = {
+          styleId: "minimal",
+          titleSize: 48,
+          introSize: 14,
+          bodySize: 15,
+          coverImage: null,
+          bodyImages: {},
+          autoPaginate: true,
+          showDate: true,
+          showPageNum: true,
+        };
+        const titleInput = document.getElementById("input-title");
+        const introInput = document.getElementById("input-intro");
+        const contentInput = document.getElementById("input-content");
+        if (titleInput) titleInput.value = "";
+        if (introInput) introInput.value = "";
+        if (contentInput) contentInput.value = "";
+        const coverUpload = document.getElementById("cover-image-upload");
+        if (coverUpload) coverUpload.value = "";
+        const titleSize = document.getElementById("title-size");
+        const bodySize = document.getElementById("body-size");
+        if (titleSize) titleSize.value = state.titleSize;
+        if (bodySize) bodySize.value = state.bodySize;
+        document.getElementById("title-size-val").innerText = `${state.titleSize}px`;
+        document.getElementById("body-size-val").innerText = `${state.bodySize}px`;
+        const autoPaginate = document.getElementById("auto-paginate");
+        const showDate = document.getElementById("show-date");
+        const showPageNum = document.getElementById("show-page-num");
+        if (autoPaginate) autoPaginate.checked = true;
+        if (showDate) showDate.checked = true;
+        if (showPageNum) showPageNum.checked = true;
+        updateImageList();
+        updatePreview();
+        saveState();
+      }
+
+      // ==================== 主题封面渲染函数 ====================
+      const themeCoverRenderers = {
+        minimal: (config, title, date, tag, intro) => {
+          if (state.coverImage) {
+            const s = themeStyles.minimal;
+            return `<div class="card-bg p-0 flex flex-col h-full overflow-hidden" style="padding: 0; background-color: ${s.bg};">
+                        <div class="h-[55%] w-full relative overflow-hidden bg-gray-100"><img src="${state.coverImage}" class="w-full h-full object-cover"></div>
+                        <div class="h-[45%] w-full p-8 flex flex-col justify-center text-left">
+                            <div class="flex items-center gap-2 mb-4 text-xs font-bold opacity-70" style="color: ${s.text};"><i data-lucide="user" size="14"></i><span>${tag}</span></div>
+                            <h1 class="leading-[1.1] mb-5 font-bold" style="font-size: ${state.titleSize}px; margin-left:0; margin-right:0; text-align: left; text-shadow: none; border: none; padding: 0; font-family: ${s.fontTitle}; color: ${s.title};">${title}</h1>
+                            <div class="pl-4 border-l-4 leading-relaxed opacity-90 font-medium" style="border-color: ${s.border}; color: ${s.text}; font-family: ${s.fontBody}; white-space: pre-wrap; font-size: ${state.introSize}px;">${intro}</div>
+                        </div>
+                    </div>`;
+          }
+          return `<div class="card-bg flex flex-col justify-between" style="padding: 40px; background: #EBF5FB;">
+                    <div class="flex-1 flex flex-col justify-center items-start">
+                        <div class="text-xs font-bold uppercase tracking-widest mb-4" style="color: #566573;">${date}</div>
+                        <h1 class="font-black leading-tight text-left mb-6" style="font-size: ${state.titleSize}px; letter-spacing: -0.03em; color: #1E3A5F;">${title}</h1>
+                        <div class="w-16 h-1 mb-8" style="background-color: #3498DB;"></div>
+                        <p class="font-medium leading-relaxed" style="font-size: 16px; color: #566573;">${intro}</p>
+                    </div>
+                    <div class="flex justify-between items-center w-full pt-8 mt-auto" style="border-top: 1px solid #AED6F1;">
+                        <div class="flex items-center gap-2 text-xs font-bold" style="color: #1E3A5F;">
+                            <span class="w-6 h-6 rounded-full text-white flex items-center justify-center" style="background-color: #3498DB;">R</span>
+                            ${tag}
+                        </div>
+                        <i data-lucide="arrow-right" style="color: #AED6F1;" size="20"></i>
+                    </div>
+                </div>`;
+        },
+        serif: (config, title, date, tag, intro) => {
+          const s = themeStyles.serif;
+          if (state.coverImage) {
+            return `<div class="card-bg p-0 flex flex-col h-full overflow-hidden" style="padding: 0; background-color: ${s.bg};">
+                        <div class="h-[55%] w-full relative overflow-hidden bg-gray-100"><img src="${state.coverImage}" class="w-full h-full object-cover"></div>
+                        <div class="h-[45%] w-full p-8 flex flex-col justify-center text-left">
+                            <div class="flex items-center gap-2 mb-4 text-xs font-bold opacity-70" style="color: ${s.text};"><i data-lucide="user" size="14"></i><span>${tag}</span></div>
+                            <h1 class="leading-[1.1] mb-5 font-bold" style="font-size: ${state.titleSize}px; margin-left:0; margin-right:0; text-align: left; text-shadow: none; border: none; padding: 0; font-family: ${s.fontTitle}; color: ${s.title};">${title}</h1>
+                            <div class="pl-4 border-l-4 leading-relaxed opacity-90 font-medium" style="border-color: ${s.border}; color: ${s.text}; font-family: ${s.fontBody}; white-space: pre-wrap; font-size: ${state.introSize}px;">${intro}</div>
+                        </div>
+                    </div>`;
+          }
+          return `<div class="card-bg justify-center"><div class="border-l-4 border-[#B85C5C] pl-6"><div class="text-[#B85C5C] font-bold mb-6 tracking-widest text-xs">${date}</div><h1 class="font-bold text-[#2c2c2c] leading-tight" style="font-size: ${state.titleSize}px">${title}</h1><div class="mt-8 text-gray-500 font-medium border-t border-gray-300 pt-4 inline-block text-sm">${tag}</div></div></div>`;
+        },
+        acid: (config, title, date, tag, intro) => {
+          const s = themeStyles.acid;
+          if (state.coverImage) {
+            return `<div class="card-bg p-0 flex flex-col h-full overflow-hidden" style="padding: 0; background-color: ${s.bg};">
+                        <div class="h-[55%] w-full relative overflow-hidden bg-gray-100"><img src="${state.coverImage}" class="w-full h-full object-cover"></div>
+                        <div class="h-[45%] w-full p-8 flex flex-col justify-center text-left">
+                            <div class="flex items-center gap-2 mb-4 text-xs font-bold opacity-70" style="color: ${s.text};"><i data-lucide="user" size="14"></i><span>${tag}</span></div>
+                            <h1 class="leading-[1.1] mb-5 font-bold" style="font-size: ${state.titleSize}px; margin-left:0; margin-right:0; text-align: left; text-shadow: none; border: none; padding: 0; font-family: ${s.fontTitle}; color: ${s.title};">${title}</h1>
+                            <div class="pl-4 border-l-4 leading-relaxed opacity-90 font-medium" style="border-color: ${s.border}; color: ${s.text}; font-family: ${s.fontBody}; white-space: pre-wrap; font-size: ${state.introSize}px;">${intro}</div>
+                        </div>
+                    </div>`;
+          }
+          return `<div class="card-bg"><div class="flex justify-between border-b-2 border-black pb-2 mb-6 font-mono text-xs font-bold"><span>${date}</span><span>ISSUE</span></div><div class="flex-1 flex flex-col justify-center items-center text-center"><h1 class="text-black font-black uppercase leading-[0.9] transform skew-x-2 drop-shadow-xl" style="font-size: ${state.titleSize}px;">${title}</h1><div class="mt-6 bg-black text-[#CCFF00] px-4 py-2 font-bold text-lg transform skew-x-12">${tag}</div></div></div>`;
+        },
+        tech: (config, title, date, tag, intro) => {
+          const s = themeStyles.tech;
+          if (state.coverImage) {
+            return `<div class="card-bg p-0 flex flex-col h-full overflow-hidden" style="padding: 0; background-color: ${s.bg};">
+                        <div class="h-[55%] w-full relative overflow-hidden bg-gray-100"><img src="${state.coverImage}" class="w-full h-full object-cover"></div>
+                        <div class="h-[45%] w-full p-8 flex flex-col justify-center text-left">
+                            <div class="flex items-center gap-2 mb-4 text-xs font-bold opacity-70" style="color: ${s.text};"><i data-lucide="user" size="14"></i><span>${tag}</span></div>
+                            <h1 class="leading-[1.1] mb-5 font-bold" style="font-size: ${state.titleSize}px; margin-left:0; margin-right:0; text-align: left; text-shadow: none; border: none; padding: 0; font-family: ${s.fontTitle}; background: linear-gradient(to right, #60A5FA, #A78BFA); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;">${title}</h1>
+                            <div class="pl-4 border-l-4 leading-relaxed opacity-90 font-medium" style="border-color: ${s.border}; color: ${s.text}; font-family: ${s.fontBody}; white-space: pre-wrap; font-size: ${state.introSize}px;">${intro}</div>
+                        </div>
+                    </div>`;
+          }
+          return `<div class="card-bg justify-center relative"><div class="grid-bg"></div><div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-blue-500/20 blur-[100px] rounded-full pointer-events-none"></div><div class="z-10 text-center"><div class="text-blue-400 font-mono text-xs mb-6 tracking-[0.3em] uppercase border border-blue-500/30 inline-block px-3 py-1 rounded bg-blue-900/20 backdrop-blur">System Ready</div><h1 class="font-bold leading-tight mb-6" style="font-size: ${state.titleSize}px; background: linear-gradient(to right, #60A5FA, #A78BFA); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;">${title}</h1><div class="flex items-center justify-center gap-2 text-gray-400 text-xs font-mono"><span>${date}</span><span class="text-blue-500">//</span><span>${tag}</span></div></div></div>`;
+        },
+        cream: (config, title, date, tag, intro) => {
+          const s = themeStyles.cream;
+          if (state.coverImage) {
+            return `<div class="card-bg p-0 flex flex-col h-full overflow-hidden" style="padding: 0; background-color: ${s.bg};">
+                        <div class="h-[55%] w-full relative overflow-hidden bg-gray-100"><img src="${state.coverImage}" class="w-full h-full object-cover"></div>
+                        <div class="h-[45%] w-full p-8 flex flex-col justify-center text-left">
+                            <div class="flex items-center gap-2 mb-4 text-xs font-bold opacity-70" style="color: ${s.text};"><i data-lucide="user" size="14"></i><span>${tag}</span></div>
+                            <h1 class="leading-[1.1] mb-5 font-bold" style="font-size: ${state.titleSize}px; margin-left:0; margin-right:0; text-align: left; text-shadow: none; border: none; padding: 0; font-family: ${s.fontTitle}; color: ${s.title};">${title}</h1>
+                            <div class="pl-4 border-l-4 leading-relaxed opacity-90 font-medium" style="border-color: ${s.border}; color: ${s.text}; font-family: ${s.fontBody}; white-space: pre-wrap; font-size: ${state.introSize}px;">${intro}</div>
+                        </div>
+                    </div>`;
+          }
+          return `<div class="card-bg flex flex-col justify-between" style="padding: 40px; background: ${s.bg};">
+                    <div class="flex-1 flex flex-col justify-center items-start">
+                        <div class="text-xs font-bold uppercase tracking-widest mb-4" style="color: ${s.gray};">${date}</div>
+                        <h1 class="font-black leading-tight text-left mb-6" style="font-size: ${state.titleSize}px; letter-spacing: -0.02em; color: ${s.title};">${title}</h1>
+                        <div class="w-16 h-1 mb-8" style="background-color: ${s.accent};"></div>
+                        <p class="font-medium leading-relaxed" style="font-size: 16px; color: ${s.text};">${intro}</p>
+                    </div>
+                    <div class="flex justify-between items-center w-full pt-8 mt-auto" style="border-top: 1px solid ${s.border};">
+                        <div class="flex items-center gap-2 text-xs font-bold" style="color: ${s.text};">
+                            <span class="w-6 h-6 rounded-full text-white flex items-center justify-center" style="background-color: ${s.accent};">R</span>
+                            ${tag}
+                        </div>
+                        <i data-lucide="arrow-right" style="color: ${s.border};" size="20"></i>
+                    </div>
+                </div>`;
+        },
+        sage: (config, title, date, tag, intro) => {
+          const s = themeStyles.sage;
+          if (state.coverImage) {
+            return `<div class="card-bg p-0 flex flex-col h-full overflow-hidden" style="padding: 0; background-color: ${s.bg};">
+                        <div class="h-[55%] w-full relative overflow-hidden bg-gray-100"><img src="${state.coverImage}" class="w-full h-full object-cover"></div>
+                        <div class="h-[45%] w-full p-8 flex flex-col justify-center text-left">
+                            <div class="flex items-center gap-2 mb-4 text-xs font-bold opacity-70" style="color: ${s.text};"><i data-lucide="user" size="14"></i><span>${tag}</span></div>
+                            <h1 class="leading-[1.1] mb-5 font-bold" style="font-size: ${state.titleSize}px; margin-left:0; margin-right:0; text-align: left; text-shadow: none; border: none; padding: 0; font-family: ${s.fontTitle}; color: ${s.title};">${title}</h1>
+                            <div class="pl-4 border-l-4 leading-relaxed opacity-90 font-medium" style="border-color: ${s.border}; color: ${s.text}; font-family: ${s.fontBody}; white-space: pre-wrap; font-size: ${state.introSize}px;">${intro}</div>
+                        </div>
+                    </div>`;
+          }
+          return `<div class="card-bg justify-center"><div class="border-l-4 pl-6" style="border-color: ${s.accent};"><div class="text-xs font-bold mb-6 tracking-widest" style="color: ${s.gray};">${date}</div><h1 class="font-black leading-tight" style="font-size: ${state.titleSize}px; color: ${s.title};">${title}</h1><div class="mt-8 text-sm font-medium" style="color: ${s.text}; border-top: 1px solid ${s.border}; padding-top: 14px;">${tag}</div></div></div>`;
+        },
+        rose: (config, title, date, tag, intro) => {
+          const s = themeStyles.rose;
+          if (state.coverImage) {
+            return `<div class="card-bg p-0 flex flex-col h-full overflow-hidden" style="padding: 0; background-color: ${s.bg};">
+                        <div class="h-[55%] w-full relative overflow-hidden bg-gray-100"><img src="${state.coverImage}" class="w-full h-full object-cover"></div>
+                        <div class="h-[45%] w-full p-8 flex flex-col justify-center text-left">
+                            <div class="flex items-center gap-2 mb-4 text-xs font-bold opacity-70" style="color: ${s.text};"><i data-lucide="user" size="14"></i><span>${tag}</span></div>
+                            <h1 class="leading-[1.1] mb-5 font-bold" style="font-size: ${state.titleSize}px; margin-left:0; margin-right:0; text-align: left; text-shadow: none; border: none; padding: 0; font-family: ${s.fontTitle}; color: ${s.title};">${title}</h1>
+                            <div class="pl-4 border-l-4 leading-relaxed opacity-90 font-medium" style="border-color: ${s.border}; color: ${s.text}; font-family: ${s.fontBody}; white-space: pre-wrap; font-size: ${state.introSize}px;">${intro}</div>
+                        </div>
+                    </div>`;
+          }
+          return `<div class="card-bg flex flex-col justify-between" style="padding: 40px; background: ${s.bg};">
+                    <div class="flex-1 flex flex-col justify-center items-start">
+                        <div class="text-xs font-bold uppercase tracking-widest mb-4" style="color: ${s.gray};">${date}</div>
+                        <h1 class="font-black leading-tight text-left mb-6" style="font-size: ${state.titleSize}px; letter-spacing: -0.02em; color: ${s.title};">${title}</h1>
+                        <div class="w-16 h-1 mb-8" style="background-color: ${s.accent};"></div>
+                        <p class="font-medium leading-relaxed" style="font-size: 16px; color: ${s.text};">${intro}</p>
+                    </div>
+                    <div class="flex justify-between items-center w-full pt-8 mt-auto" style="border-top: 1px solid ${s.border};">
+                        <div class="flex items-center gap-2 text-xs font-bold" style="color: ${s.text};">
+                            <span class="w-6 h-6 rounded-full text-white flex items-center justify-center" style="background-color: ${s.accent};">R</span>
+                            ${tag}
+                        </div>
+                        <i data-lucide="arrow-right" style="color: ${s.border};" size="20"></i>
+                    </div>
+                </div>`;
+        },
+        mono: (config, title, date, tag, intro) => {
+          const s = themeStyles.mono;
+          if (state.coverImage) {
+            return `<div class="card-bg p-0 flex flex-col h-full overflow-hidden" style="padding: 0; background-color: ${s.bg};">
+                        <div class="h-[55%] w-full relative overflow-hidden bg-gray-100"><img src="${state.coverImage}" class="w-full h-full object-cover"></div>
+                        <div class="h-[45%] w-full p-8 flex flex-col justify-center text-left">
+                            <div class="flex items-center gap-2 mb-4 text-xs font-bold opacity-70" style="color: ${s.text};"><i data-lucide="user" size="14"></i><span>${tag}</span></div>
+                            <h1 class="leading-[1.1] mb-5 font-bold" style="font-size: ${state.titleSize}px; margin-left:0; margin-right:0; text-align: left; text-shadow: none; border: none; padding: 0; font-family: ${s.fontTitle}; color: ${s.title};">${title}</h1>
+                            <div class="pl-4 border-l-4 leading-relaxed opacity-90 font-medium" style="border-color: ${s.border}; color: ${s.text}; font-family: ${s.fontBody}; white-space: pre-wrap; font-size: ${state.introSize}px;">${intro}</div>
+                        </div>
+                    </div>`;
+          }
+          return `<div class="card-bg justify-center"><div class="border-l-4 pl-6" style="border-color: ${s.accent};"><div class="text-xs font-bold mb-6 tracking-widest" style="color: ${s.gray};">${date}</div><h1 class="font-black leading-tight" style="font-size: ${state.titleSize}px; color: ${s.title};">${title}</h1><div class="mt-8 text-sm font-medium" style="color: ${s.text}; border-top: 1px solid ${s.border}; padding-top: 14px;">${tag}</div></div></div>`;
+        },
+        sunset: (config, title, date, tag, intro) => {
+          const s = themeStyles.sunset;
+          if (state.coverImage) {
+            return `<div class="card-bg p-0 flex flex-col h-full overflow-hidden" style="padding: 0; background-color: ${s.bg};">
+                        <div class="h-[55%] w-full relative overflow-hidden bg-gray-100"><img src="${state.coverImage}" class="w-full h-full object-cover"></div>
+                        <div class="h-[45%] w-full p-8 flex flex-col justify-center text-left">
+                            <div class="flex items-center gap-2 mb-4 text-xs font-bold opacity-70" style="color: ${s.text};"><i data-lucide="user" size="14"></i><span>${tag}</span></div>
+                            <h1 class="leading-[1.1] mb-5 font-bold" style="font-size: ${state.titleSize}px; margin-left:0; margin-right:0; text-align: left; text-shadow: none; border: none; padding: 0; font-family: ${s.fontTitle}; color: ${s.title};">${title}</h1>
+                            <div class="pl-4 border-l-4 leading-relaxed opacity-90 font-medium" style="border-color: ${s.border}; color: ${s.text}; font-family: ${s.fontBody}; white-space: pre-wrap; font-size: ${state.introSize}px;">${intro}</div>
+                        </div>
+                    </div>`;
+          }
+          return `<div class="card-bg flex flex-col justify-between" style="padding: 40px; background: ${s.bg};">
+                    <div class="flex-1 flex flex-col justify-center items-start">
+                        <div class="text-xs font-bold uppercase tracking-widest mb-4" style="color: ${s.gray};">${date}</div>
+                        <h1 class="font-black leading-tight text-left mb-6" style="font-size: ${state.titleSize}px; letter-spacing: -0.02em; color: ${s.title};">${title}</h1>
+                        <div class="w-16 h-1 mb-8" style="background-color: ${s.accent};"></div>
+                        <p class="font-medium leading-relaxed" style="font-size: 16px; color: ${s.text};">${intro}</p>
+                    </div>
+                    <div class="flex justify-between items-center w-full pt-8 mt-auto" style="border-top: 1px solid ${s.border};">
+                        <div class="flex items-center gap-2 text-xs font-bold" style="color: ${s.text};">
+                            <span class="w-6 h-6 rounded-full text-white flex items-center justify-center" style="background-color: ${s.accent};">R</span>
+                            ${tag}
+                        </div>
+                        <i data-lucide="arrow-right" style="color: ${s.border};" size="20"></i>
+                    </div>
+                </div>`;
+        },
+      };
+
+      // ==================== 主题配置 ====================
+      const STYLES = [
+        {
+          id: "minimal",
+          name: "默认",
+          class: "theme-minimal",
+          bg: "#EBF5FB",
+          text: "#1E3A5F",
+        },
+        {
+          id: "tech",
+          name: "技术",
+          class: "theme-tech",
+          bg: "#0F172A",
+          text: "#FFF",
+        },
+        {
+          id: "elegant",
+          name: "优雅",
+          class: "theme-soft theme-rose",
+          bg: "#FFF0F6",
+          text: "#6b1f3a",
+        },
+        {
+          id: "deepread",
+          name: "深度阅读",
+          class: "theme-editorial",
+          bg: "#FCFAF6",
+          text: "#1F2937",
+        },
+        {
+          id: "magazine",
+          name: "杂志风格",
+          class: "theme-serif",
+          bg: "#F2EFE9",
+          text: "#2c2c2c",
+        },
+        {
+          id: "nyt",
+          name: "纽约时报",
+          class: "theme-nyt",
+          bg: "#F8F5EE",
+          text: "#1F2937",
+        },
+        {
+          id: "ft",
+          name: "金融时报",
+          class: "theme-ft",
+          bg: "#F6E9DB",
+          text: "#362312",
+        },
+        {
+          id: "jonyive",
+          name: "Jony Ive",
+          class: "theme-apple",
+          bg: "#FFFFFF",
+          text: "#111827",
+        },
+        {
+          id: "wired",
+          name: "Wired 连线",
+          class: "theme-wired",
+          bg: "#0B1220",
+          text: "#E5E7EB",
+        },
+        {
+          id: "medium",
+          name: "Medium 长文",
+          class: "theme-editorial",
+          bg: "#FCFAF6",
+          text: "#1F2937",
+        },
+        {
+          id: "apple",
+          name: "Apple 极简",
+          class: "theme-apple",
+          bg: "#FFFFFF",
+          text: "#111827",
+        },
+        {
+          id: "claude",
+          name: "Anthropic Claude",
+          class: "theme-claude",
+          bg: "#FAF6F0",
+          text: "#3F3428",
+        },
+        {
+          id: "coder",
+          name: "AI Coder 特调",
+          class: "theme-coder",
+          bg: "#0B1020",
+          text: "#D1FAE5",
+        },
+      ];
+
+      // 封面主题样式（全局定义，避免重复创建）
+      const themeStyles = {
+        minimal: {
+          bg: "#EBF5FB",
+          text: "#566573",
+          title: "#1E3A5F",
+          border: "#3498DB",
+          fontTitle: "'Inter', sans-serif",
+          fontBody: "'Inter', sans-serif",
+        },
+        tech: {
+          bg: "#0F172A",
+          text: "#94A3B8",
+          title: "#FFF",
+          border: "#3B82F6",
+          fontTitle: "'Inter', sans-serif",
+          fontBody: "'Inter', sans-serif",
+        },
+        elegant: {
+          bg: "#FFF0F6",
+          text: "#6b1f3a",
+          title: "#6b1f3a",
+          border: "#F2BFD3",
+          accent: "#D9487F",
+          gray: "#8c4c64",
+          fontTitle: "'Inter', sans-serif",
+          fontBody: "'Inter', sans-serif",
+        },
+        deepread: {
+          bg: "#FCFAF6",
+          text: "#1F2937",
+          title: "#1F2937",
+          border: "#9CA3AF",
+          fontTitle: "'Noto Serif SC', serif",
+          fontBody: "'Noto Serif SC', serif",
+        },
+        magazine: {
+          bg: "#F2EFE9",
+          text: "#2c2c2c",
+          title: "#2c2c2c",
+          border: "#B85C5C",
+          fontTitle: "'Noto Serif SC', serif",
+          fontBody: "'FangSong', serif",
+        },
+        nyt: {
+          bg: "#F8F5EE",
+          text: "#1F2937",
+          title: "#111827",
+          border: "#111827",
+          fontTitle: "'Noto Serif SC', serif",
+          fontBody: "'Noto Serif SC', serif",
+        },
+        ft: {
+          bg: "#F6E9DB",
+          text: "#362312",
+          title: "#5B2B14",
+          border: "#C97B4B",
+          fontTitle: "'Noto Serif SC', serif",
+          fontBody: "'Noto Serif SC', serif",
+        },
+        jonyive: {
+          bg: "#FFFFFF",
+          text: "#111827",
+          title: "#111827",
+          border: "#D1D5DB",
+          fontTitle: "'Inter', sans-serif",
+          fontBody: "'Inter', sans-serif",
+        },
+        wired: {
+          bg: "#0B1220",
+          text: "#CBD5E1",
+          title: "#F8FAFC",
+          border: "#22D3EE",
+          fontTitle: "'Inter', sans-serif",
+          fontBody: "'Inter', sans-serif",
+        },
+        medium: {
+          bg: "#FCFAF6",
+          text: "#1F2937",
+          title: "#111827",
+          border: "#D1D5DB",
+          fontTitle: "'Noto Serif SC', serif",
+          fontBody: "'Inter', sans-serif",
+        },
+        apple: {
+          bg: "#FFFFFF",
+          text: "#111827",
+          title: "#111827",
+          border: "#D1D5DB",
+          fontTitle: "'Inter', sans-serif",
+          fontBody: "'Inter', sans-serif",
+        },
+        claude: {
+          bg: "#FAF6F0",
+          text: "#3F3428",
+          title: "#7C4F2D",
+          border: "#C47A45",
+          fontTitle: "'Inter', sans-serif",
+          fontBody: "'Inter', sans-serif",
+        },
+        coder: {
+          bg: "#0B1020",
+          text: "#D1FAE5",
+          title: "#34D399",
+          border: "#34D399",
+          fontTitle: "'IBM Plex Mono', monospace",
+          fontBody: "'IBM Plex Mono', monospace",
+        },
+      };
+
+      let state = {
+        styleId: "minimal",
+        titleSize: 48,
+        introSize: 14,
+        bodySize: 15,
+        coverImage: null,
+        bodyImages: {},
+        autoPaginate: true,
+        showDate: true,
+        showPageNum: true,
+      };
+
+      const renderer = new marked.Renderer();
+      renderer.image = function (href, title, text) {
+        let widthStyle = "";
+        let altText = text;
+        if (text && text.includes("|")) {
+          const parts = text.split("|");
+          altText = parts[0];
+          const width = parts[1];
+          if (width.match(/^[0-9]+(%|px)$/)) {
+            widthStyle = `width: ${width};`;
+          }
+        }
+        let imgSource = href;
+        if (href && href.startsWith("img:")) {
+          const id = href.split(":")[1];
+          if (state.bodyImages[id]) {
+            imgSource = state.bodyImages[id];
+          }
+        }
+        return `<img src="${imgSource}" alt="${altText}" title="${title || ""}" style="${widthStyle}">`;
+      };
+
+      marked.setOptions({ breaks: true, gfm: true, renderer: renderer });
+
+      // ==================== 状态持久化 ====================
+      function saveState() {
+        const config = {
+          panelWidth: {
+            left: panelState.left.width,
+            right: panelState.right.width,
+          },
+          styleId: state.styleId,
+          titleSize: document.getElementById("title-size").value,
+          bodySize: document.getElementById("body-size").value,
+          headingScale: document.getElementById("heading-scale").value,
+          canvasSize: document.getElementById("canvas-size").value,
+          title: document.getElementById("input-title").value,
+          intro: document.getElementById("input-intro").value,
+          date: document.getElementById("input-date").value,
+          tag: document.getElementById("input-tag").value,
+          autoPaginate: document.getElementById("auto-paginate").checked,
+          showDate: document.getElementById("show-date").checked,
+          showPageNum: document.getElementById("show-page-num").checked,
+        };
+        localStorage.setItem("xhs-note-generator", JSON.stringify(config));
+      }
+
+      function loadState() {
+        const saved = localStorage.getItem("xhs-note-generator");
+        if (!saved) return;
+        try {
+          const config = JSON.parse(saved);
+          if (config.panelWidth) {
+            panelState.left.width = config.panelWidth.left || 350;
+            panelState.right.width = config.panelWidth.right || 272;
+            document.getElementById("left-panel").style.width =
+              panelState.left.width + "px";
+            document.getElementById("right-panel").style.width =
+              panelState.right.width + "px";
+          }
+          if (config.styleId) {
+            state.styleId = STYLES.some((style) => style.id === config.styleId)
+              ? config.styleId
+              : "minimal";
+            renderStyleGrid();
+          }
+          if (config.titleSize) {
+            document.getElementById("title-size").value = config.titleSize;
+          }
+          if (config.bodySize) {
+            document.getElementById("body-size").value = config.bodySize;
+          }
+          if (config.headingScale) {
+            document.getElementById("heading-scale").value =
+              config.headingScale;
+          }
+          if (config.canvasSize) {
+            document.getElementById("canvas-size").value = config.canvasSize;
+          }
+          if (config.title) {
+            document.getElementById("input-title").value = config.title;
+          }
+          if (config.intro) {
+            document.getElementById("input-intro").value = config.intro;
+          }
+          if (config.date) {
+            document.getElementById("input-date").value = config.date;
+          }
+          if (config.tag) {
+            document.getElementById("input-tag").value = config.tag;
+          }
+          if (typeof config.autoPaginate === "boolean") {
+            document.getElementById("auto-paginate").checked =
+              config.autoPaginate;
+          }
+          if (typeof config.showDate === "boolean") {
+            document.getElementById("show-date").checked = config.showDate;
+          }
+          if (typeof config.showPageNum === "boolean") {
+            document.getElementById("show-page-num").checked =
+              config.showPageNum;
+          }
+        } catch (e) {
+          console.warn("恢复配置失败", e);
+        }
+      }
+
+      window.onload = () => {
+        // 设置默认日期为当前日期
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        document.getElementById("input-date").value = `${year}/${month}/${day}`;
+
+        loadState();
+        initUrlParams();
+        renderStyleGrid();
+        updatePreview();
+        lucide.createIcons();
+        initResizers();
+        enablePasteImage();
+        updateImageList();
+      };
+
+      let isToolbarOpen = false;
+      function toggleToolbar() {
+        isToolbarOpen = !isToolbarOpen;
+        const actions = document.getElementById("toolbar-actions");
+        const toggleIcon = document.querySelector("#toolbar-toggle i");
+        if (isToolbarOpen) {
+          actions.classList.remove("scale-0", "opacity-0");
+          toggleIcon.setAttribute("data-lucide", "x");
+        } else {
+          actions.classList.add("scale-0", "opacity-0");
+          toggleIcon.setAttribute("data-lucide", "settings-2");
+        }
+        lucide.createIcons();
+      }
+
+      function hideToolbar() {
+        if (isToolbarOpen) toggleToolbar();
+      }
+
+      let panelState = {
+        left: { width: 350, collapsed: false },
+        right: { width: 320, collapsed: false },
+      };
+
+      function togglePanel(side) {
+        const panel = document.getElementById(`${side}-panel`);
+        const btnIcon = document.querySelector(`#${side}-toggle i`);
+        panelState[side].collapsed = !panelState[side].collapsed;
+        if (panelState[side].collapsed) {
+          panelState[side].width = parseInt(panel.style.width);
+          panel.style.width = "0px";
+          panel.style.padding = "0px";
+          panel.style.border = "none";
+          btnIcon.setAttribute(
+            "data-lucide",
+            side === "left" ? "chevron-right" : "chevron-left",
+          );
+        } else {
+          panel.style.width = panelState[side].width + "px";
+          panel.style.removeProperty("padding");
+          panel.style.removeProperty("border");
+          btnIcon.setAttribute(
+            "data-lucide",
+            side === "left" ? "chevron-left" : "chevron-right",
+          );
+        }
+        lucide.createIcons();
+      }
+
+      function initResizers() {
+        setupResizer("resizer-left", "left-panel", "left");
+        setupResizer("resizer-right", "right-panel", "right");
+      }
+
+      function setupResizer(resizerId, panelId, side) {
+        const resizer = document.getElementById(resizerId);
+        const panel = document.getElementById(panelId);
+        let isResizing = false;
+        const getX = (e) => (e.touches ? e.touches[0].clientX : e.clientX);
+        const startResize = (e) => {
+          isResizing = true;
+          resizer.classList.add("active");
+          document.body.style.cursor = "col-resize";
+          document.body.classList.add("select-none");
+          if (e.touches) e.preventDefault();
+        };
+        const onMove = (e) => {
+          if (!isResizing) return;
+          if (panelState[side].collapsed) togglePanel(side);
+          const clientX = getX(e);
+          let newWidth =
+            side === "left" ? clientX : window.innerWidth - clientX;
+          if (newWidth < 100) newWidth = 100;
+          if (newWidth > 600) newWidth = 600;
+          panel.style.width = newWidth + "px";
+          panelState[side].width = newWidth;
+        };
+        const endResize = () => {
+          if (isResizing) {
+            isResizing = false;
+            resizer.classList.remove("active");
+            document.body.style.cursor = "default";
+            document.body.classList.remove("select-none");
+            saveState();
+          }
+        };
+        resizer.addEventListener("mousedown", startResize);
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", endResize);
+        resizer.addEventListener("touchstart", startResize, { passive: false });
+        document.addEventListener("touchmove", onMove, { passive: false });
+        document.addEventListener("touchend", endResize);
+      }
+
+      function initUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has("title"))
+          document.getElementById("input-title").value = decodeURIComponent(
+            urlParams.get("title"),
+          );
+        if (urlParams.has("content"))
+          document.getElementById("input-content").value = decodeURIComponent(
+            urlParams.get("content"),
+          );
+        if (urlParams.has("content")) {
+          state.markdownContent = decodeURIComponent(urlParams.get("content"));
+        }
+      }
+
+      async function pasteFromClipboard() {
+        try {
+          let html = "";
+          let text = "";
+
+          if (navigator.clipboard.read) {
+            const items = await navigator.clipboard.read();
+            for (const item of items) {
+              if (item.types.includes("text/html")) {
+                const blob = await item.getType("text/html");
+                html = await blob.text();
+                break;
+              }
+            }
+          }
+
+          if (!html) {
+            text = await navigator.clipboard.readText();
+          }
+
+          const textarea = document.getElementById("input-content");
+          if (html) {
+            const markdown = htmlToMarkdown(html, { forceMarkdown: true });
+            insertTextAtCursor(textarea, markdown);
+          } else if (text) {
+            insertTextAtCursor(textarea, text);
+          }
+          textarea.focus();
+          updatePreview();
+        } catch (err) {
+          alert("请使用 Ctrl+V 粘贴");
+        }
+      }
+
+      function enablePasteImage() {
+        document
+          .getElementById("input-content")
+          .addEventListener("paste", function (e) {
+            const items = e.clipboardData?.items;
+            const html = e.clipboardData?.getData("text/html");
+            const plain = e.clipboardData?.getData("text/plain");
+
+            for (let i = 0; i < items.length; i++) {
+              if (
+                items[i].kind === "file" &&
+                items[i].type.indexOf("image/") !== -1
+              ) {
+                e.preventDefault();
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                  const id = Date.now().toString();
+                  state.bodyImages[id] = event.target.result;
+                  const textarea = document.getElementById("input-content");
+                  insertTextAtCursor(textarea, `![截图](img:${id})`);
+                  updatePreview();
+                };
+                reader.readAsDataURL(items[i].getAsFile());
+              }
+            }
+
+            if (html) {
+              e.preventDefault();
+              const markdown = htmlToMarkdown(html, { forceMarkdown: true });
+              const textarea = document.getElementById("input-content");
+              insertTextAtCursor(textarea, markdown);
+              updatePreview();
+              return;
+            }
+
+            if (plain) {
+              // default plain text paste
+              return;
+            }
+          });
+
+      }
+
+      function insertTextAtCursor(target, text) {
+        if (!target) return;
+        target.value =
+          target.value.substring(0, target.selectionStart) +
+          text +
+          target.value.substring(target.selectionEnd);
+      }
+
+      function htmlToMarkdown(html, options = {}) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        const root = doc.body;
+
+        inlinePastedClassStyles(root);
+        sanitizeHtmlTree(root);
+        normalizePastedStructure(root);
+        simplifyRichTextMarkup(root);
+        convertPastedImages(root);
+
+        if (!window.TurndownService) {
+          const lines = [];
+          root.childNodes.forEach((node) => {
+            const chunk = nodeToMarkdown(node, 0).trim();
+            if (chunk) lines.push(chunk);
+          });
+          return lines.join("\n\n");
+        }
+
+        const service = new TurndownService({
+          headingStyle: "atx",
+          bulletListMarker: "-",
+          codeBlockStyle: "fenced",
+          emDelimiter: "*",
+        });
+
+        if (window.turndownPluginGfm) {
+          service.use(window.turndownPluginGfm.gfm);
+        }
+
+        service.keep(["sub", "sup"]);
+
+        service.addRule("wechatTables", {
+          filter(node) {
+            return (
+              node.nodeType === Node.ELEMENT_NODE &&
+              node.tagName.toLowerCase() === "table"
+            );
+          },
+          replacement(content, node) {
+            return `\n\n${convertTableNodeToMarkdown(node, service)}\n\n`;
+          },
+        });
+
+        service.addRule("taskList", {
+          filter(node) {
+            return (
+              node.nodeType === Node.ELEMENT_NODE &&
+              node.tagName.toLowerCase() === "li" &&
+              node.querySelector('input[type="checkbox"]')
+            );
+          },
+          replacement(content, node) {
+            const checkbox = node.querySelector('input[type="checkbox"]');
+            const checked = checkbox && checkbox.checked;
+            const clean = content.replace(/^\s+|\s+$/g, "");
+            return `- [${checked ? "x" : " "}] ${clean}\n`;
+          },
+        });
+
+        service.addRule("lineBreaks", {
+          filter: "br",
+          replacement() {
+            return "  \n";
+          },
+        });
+
+        service.addRule("emptyParagraphs", {
+          filter(node) {
+            return (
+              node.nodeType === Node.ELEMENT_NODE &&
+              node.tagName.toLowerCase() === "p" &&
+              !node.textContent.trim() &&
+              !node.querySelector("img")
+            );
+          },
+          replacement() {
+            return "\n\n";
+          },
+        });
+
+        service.addRule("underlines", {
+          filter: ["u"],
+          replacement(content) {
+            return content;
+          },
+        });
+
+        service.addRule("plainDivs", {
+          filter(node) {
+            return (
+              node.nodeType === Node.ELEMENT_NODE &&
+              ["div", "section", "article", "figure", "figcaption"].includes(
+                node.tagName.toLowerCase(),
+              )
+            );
+          },
+          replacement(content, node) {
+            if (node.querySelector("table")) return `\n\n${content}\n\n`;
+            return `\n\n${content}\n\n`;
+          },
+        });
+
+        const markdown = service.turndown(root.innerHTML)
+          .replace(/\n{3,}/g, "\n\n")
+          .replace(/[ \t]+\n/g, "\n")
+          .trim();
+
+        return markdown || root.textContent.trim();
+      }
+
+      function inlinePastedClassStyles(root) {
+        if (!root) return;
+        const styleTags = Array.from(root.querySelectorAll("style"));
+        if (!styleTags.length) return;
+
+        styleTags.forEach((tag) => {
+          const css = tag.textContent || "";
+          const classRule = /\.([a-zA-Z0-9_-]+)\s*\{([^}]+)\}/g;
+          let match;
+          while ((match = classRule.exec(css))) {
+            const className = match[1];
+            const cssText = match[2];
+            root.querySelectorAll(`.${className}`).forEach((el) => {
+              const merged = mergeInlineStyles(
+                el.getAttribute("style") || "",
+                cssText,
+              );
+              if (merged) el.setAttribute("style", merged);
+            });
+          }
+        });
+
+        styleTags.forEach((tag) => tag.remove());
+      }
+
+      function normalizePastedStructure(root) {
+        if (!root) return;
+        root.querySelectorAll("table").forEach((table) => {
+          table.querySelectorAll("colgroup, col").forEach((el) => el.remove());
+          if (!table.querySelector("tbody")) {
+            const body = document.createElement("tbody");
+            Array.from(table.children).forEach((child) => {
+              if (child.tagName && child.tagName.toLowerCase() === "tr") {
+                body.appendChild(child);
+              }
+            });
+            if (body.children.length) table.appendChild(body);
+          }
+          table.querySelectorAll("tr").forEach((row, index) => {
+            const cells = Array.from(row.children).filter((cell) =>
+              ["td", "th"].includes(cell.tagName.toLowerCase()),
+            );
+            if (!cells.length) return;
+            const shouldUseHeader =
+              index === 0 &&
+              !row.querySelector("th") &&
+              table.querySelectorAll("tr").length > 1;
+            if (shouldUseHeader) {
+              cells.forEach((cell) => {
+                if (cell.tagName.toLowerCase() === "td") {
+                  const th = document.createElement("th");
+                  th.innerHTML = cell.innerHTML;
+                  Array.from(cell.attributes).forEach((attr) => {
+                    th.setAttribute(attr.name, attr.value);
+                  });
+                  cell.replaceWith(th);
+                }
+              });
+            }
+          });
+        });
+
+        root.querySelectorAll("[data-checked]").forEach((el) => {
+          if (el.tagName.toLowerCase() === "li" && !el.querySelector('input[type="checkbox"]')) {
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = el.getAttribute("data-checked") === "true";
+            el.insertBefore(checkbox, el.firstChild);
+            el.insertBefore(document.createTextNode(" "), checkbox.nextSibling);
+          }
+        });
+      }
+
+      function simplifyRichTextMarkup(root) {
+        if (!root) return;
+
+        root.querySelectorAll("span").forEach((span) => {
+          const text = span.textContent || "";
+          const style = extractInlineStyle(span);
+          const parentTag = span.parentElement?.tagName?.toLowerCase() || "";
+          const meaningfulStyle = style && /color|background|border|font-size/.test(style);
+          if (!meaningfulStyle && !["a", "td", "th", "code"].includes(parentTag)) {
+            span.replaceWith(...Array.from(span.childNodes));
+            return;
+          }
+          if (style.includes("font-weight") && !span.querySelector("strong")) {
+            const strong = document.createElement("strong");
+            strong.innerHTML = span.innerHTML;
+            span.replaceWith(strong);
+            return;
+          }
+          if (style.includes("font-style") && !span.querySelector("em")) {
+            const em = document.createElement("em");
+            em.innerHTML = span.innerHTML;
+            span.replaceWith(em);
+            return;
+          }
+          if (style.includes("text-decoration")) {
+            const underline = document.createElement("u");
+            underline.innerHTML = span.innerHTML;
+            span.replaceWith(underline);
+            return;
+          }
+          if (!text.trim()) span.remove();
+        });
+
+        root.querySelectorAll("div, section, article").forEach((el) => {
+          if (el.querySelector("table, ul, ol, blockquote, pre, h1, h2, h3, h4")) return;
+          const style = extractInlineStyle(el);
+          if (!style) {
+            const p = document.createElement("p");
+            p.innerHTML = el.innerHTML;
+            el.replaceWith(p);
+          }
+        });
+      }
+
+      function convertPastedImages(root) {
+        root.querySelectorAll("img").forEach((img) => {
+          const src = img.getAttribute("src");
+          if (src && src.startsWith("data:image/")) {
+            const id = Date.now().toString() + Math.floor(Math.random() * 1000);
+            state.bodyImages[id] = src;
+            img.setAttribute("src", `img:${id}`);
+          }
+        });
+      }
+
+      function mergeInlineStyles(existing, extra) {
+        const map = {};
+        const collect = (text) => {
+          (text || "")
+            .split(";")
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .forEach((pair) => {
+              const [key, value] = pair.split(":").map((part) => (part || "").trim());
+              if (key && value) map[key.toLowerCase()] = value;
+            });
+        };
+        collect(existing);
+        collect(extra);
+        return Object.entries(map)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join("; ");
+      }
+
+      function convertTableNodeToMarkdown(table, service) {
+        const matrix = [];
+        const rowspanMap = [];
+        const rows = Array.from(table.querySelectorAll("tr"));
+
+        rows.forEach((row, rowIndex) => {
+          const current = [];
+          let colIndex = 0;
+
+          while (rowspanMap[colIndex] && rowspanMap[colIndex].remaining > 0) {
+            current[colIndex] = rowspanMap[colIndex].text;
+            rowspanMap[colIndex].remaining -= 1;
+            colIndex += 1;
+          }
+
+          Array.from(row.children)
+            .filter((cell) => ["td", "th"].includes(cell.tagName.toLowerCase()))
+            .forEach((cell) => {
+              while (current[colIndex] !== undefined) colIndex += 1;
+              const text = getTableCellMarkdown(cell, service);
+              const colspan = Math.max(parseInt(cell.getAttribute("colspan") || "1", 10), 1);
+              const rowspan = Math.max(parseInt(cell.getAttribute("rowspan") || "1", 10), 1);
+
+              for (let i = 0; i < colspan; i += 1) {
+                current[colIndex + i] = text;
+                if (rowspan > 1) {
+                  rowspanMap[colIndex + i] = {
+                    text,
+                    remaining: rowspan - 1,
+                  };
+                }
+              }
+              colIndex += colspan;
+            });
+
+          while (rowspanMap[colIndex] && rowspanMap[colIndex].remaining > 0) {
+            current[colIndex] = rowspanMap[colIndex].text;
+            rowspanMap[colIndex].remaining -= 1;
+            colIndex += 1;
+          }
+
+          matrix.push(current);
+        });
+
+        const width = matrix.reduce((max, row) => Math.max(max, row.length), 0);
+        const normalized = matrix.map((row) => {
+          const filled = row.slice();
+          while (filled.length < width) filled.push("");
+          return filled;
+        });
+
+        if (!normalized.length) return "";
+
+        const header = normalized[0];
+        const body = normalized.slice(1);
+        const divider = header.map(() => "---");
+        const lines = [
+          `| ${header.join(" | ")} |`,
+          `| ${divider.join(" | ")} |`,
+        ];
+
+        body.forEach((row) => {
+          lines.push(`| ${row.join(" | ")} |`);
+        });
+
+        return lines.join("\n");
+      }
+
+      function getTableCellMarkdown(cell, service) {
+        const clone = cell.cloneNode(true);
+        clone.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
+        const markdown = service.turndown(clone.innerHTML || clone.textContent || "");
+        return markdown
+          .replace(/\n{2,}/g, "<br>")
+          .replace(/\n/g, "<br>")
+          .replace(/\|/g, "\\|")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function nodeToMarkdown(node, indentLevel) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return node.textContent.replace(/\s+/g, " ");
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return "";
+
+        const tag = node.tagName.toLowerCase();
+        const style = extractInlineStyle(node);
+        if (style || hasStyledDescendant(node)) {
+          return sanitizeNodeToHtml(node);
+        }
+
+        if (tag === "br") return "\n";
+        if (tag === "strong" || tag === "b") {
+          return `**${childrenToMarkdown(node, indentLevel)}**`;
+        }
+        if (tag === "em" || tag === "i") {
+          return `*${childrenToMarkdown(node, indentLevel)}*`;
+        }
+        if (tag === "code") {
+          return `\`${node.textContent.trim()}\``;
+        }
+        if (tag === "pre") {
+          return `\n\`\`\`\n${node.textContent.trim()}\n\`\`\``;
+        }
+        if (tag === "a") {
+          const href = node.getAttribute("href") || "";
+          const text = childrenToMarkdown(node, indentLevel) || href;
+          return `[${text}](${href})`;
+        }
+        if (tag === "img") {
+          const src = node.getAttribute("src") || "";
+          const alt = node.getAttribute("alt") || "图片";
+          return `![${alt}](${src})`;
+        }
+        if (tag === "h1") return `# ${childrenToMarkdown(node, indentLevel)}`;
+        if (tag === "h2") return `## ${childrenToMarkdown(node, indentLevel)}`;
+        if (tag === "h3") return `### ${childrenToMarkdown(node, indentLevel)}`;
+        if (tag === "h4") return `#### ${childrenToMarkdown(node, indentLevel)}`;
+        if (tag === "blockquote") {
+          const raw = childrenToMarkdown(node, indentLevel);
+          const text = raw.split("\n");
+          return text.map((line) => `> ${line}`).join("\n");
+        }
+        if (tag === "ul" || tag === "ol") {
+          const isOrdered = tag === "ol";
+          const items = [];
+          let index = 1;
+          node.querySelectorAll(":scope > li").forEach((li) => {
+            const prefix = isOrdered ? `${index}. ` : "- ";
+            const item = childrenToMarkdown(li, indentLevel + 1).trim();
+            items.push(prefix + item);
+            index += 1;
+          });
+          return items.join("\n");
+        }
+        if (tag === "li") {
+          return childrenToMarkdown(node, indentLevel).trim();
+        }
+        if (tag === "p" || tag === "div" || tag === "section") {
+          const content = childrenToMarkdown(node, indentLevel).trim();
+          return content;
+        }
+        if (tag === "span") {
+          return childrenToMarkdown(node, indentLevel).trim();
+        }
+
+        return childrenToMarkdown(node, indentLevel).trim();
+      }
+
+      function childrenToMarkdown(node, indentLevel) {
+        const parts = [];
+        node.childNodes.forEach((child) => {
+          const md = nodeToMarkdown(child, indentLevel);
+          if (md) parts.push(md);
+        });
+        return parts.join("");
+      }
+
+      function extractInlineStyle(node) {
+        const style = node.getAttribute && node.getAttribute("style");
+        if (!style) return "";
+        const keep = [
+          "color",
+          "background-color",
+          "background",
+          "font-weight",
+          "font-style",
+          "text-decoration",
+          "font-size",
+          "font-family",
+          "text-align",
+          "line-height",
+          "border",
+          "border-left",
+          "border-right",
+          "border-top",
+          "border-bottom",
+          "border-color",
+          "border-radius",
+          "padding",
+          "padding-left",
+          "padding-right",
+          "padding-top",
+          "padding-bottom",
+          "margin",
+          "margin-left",
+          "margin-right",
+          "margin-top",
+          "margin-bottom",
+        ];
+        const out = [];
+        style.split(";").forEach((rule) => {
+          const [k, v] = rule.split(":").map((s) => (s || "").trim());
+          if (!k || !v) return;
+          if (keep.includes(k.toLowerCase())) out.push(`${k}:${v}`);
+        });
+        return out.join("; ");
+      }
+
+      function hasStyledDescendant(node) {
+        if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+        if (node.getAttribute && node.getAttribute("style")) return true;
+        return !!node.querySelector && !!node.querySelector("[style]");
+      }
+
+      function sanitizeHtmlTree(root) {
+        if (!root || !root.querySelectorAll) return;
+        const allowedTags = new Set([
+          "p",
+          "div",
+          "span",
+          "strong",
+          "b",
+          "em",
+          "i",
+          "u",
+          "s",
+          "code",
+          "pre",
+          "a",
+          "img",
+          "ul",
+          "ol",
+          "li",
+          "br",
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "blockquote",
+          "table",
+          "thead",
+          "tbody",
+          "tfoot",
+          "tr",
+          "th",
+          "td",
+          "colgroup",
+          "col",
+          "hr",
+          "sup",
+          "sub",
+          "figure",
+          "figcaption",
+          "section",
+          "article",
+          "header",
+          "footer",
+        ]);
+        const walker = document.createTreeWalker(
+          root,
+          NodeFilter.SHOW_ELEMENT,
+        );
+        const toRemove = [];
+        while (walker.nextNode()) {
+          const el = walker.currentNode;
+          const tag = el.tagName.toLowerCase();
+          if (!allowedTags.has(tag)) {
+            toRemove.push(el);
+            continue;
+          }
+          const style = extractInlineStyle(el);
+          if (style) el.setAttribute("style", style);
+          else el.removeAttribute("style");
+
+          Array.from(el.attributes).forEach((attr) => {
+            const name = attr.name.toLowerCase();
+            if (
+              ["style", "href", "src", "alt", "title"].includes(name) ||
+              (tag === "img" && name === "width") ||
+              (tag === "td" && name === "colspan") ||
+              (tag === "td" && name === "rowspan") ||
+              (tag === "th" && name === "colspan") ||
+              (tag === "th" && name === "rowspan")
+            ) {
+              return;
+            }
+            el.removeAttribute(attr.name);
+          });
+        }
+        toRemove.forEach((el) => {
+          const text = document.createTextNode(el.textContent || "");
+          el.replaceWith(text);
+        });
+      }
+
+      function sanitizeNodeToHtml(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return escapeHtml(node.textContent || "");
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return "";
+        const tag = node.tagName.toLowerCase();
+        const allowedTags = new Set([
+          "p",
+          "div",
+          "span",
+          "strong",
+          "b",
+          "em",
+          "i",
+          "u",
+          "s",
+          "code",
+          "pre",
+          "a",
+          "img",
+          "ul",
+          "ol",
+          "li",
+          "br",
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "blockquote",
+          "table",
+          "thead",
+          "tbody",
+          "tfoot",
+          "tr",
+          "th",
+          "td",
+          "colgroup",
+          "col",
+          "hr",
+          "sup",
+          "sub",
+          "figure",
+          "figcaption",
+          "section",
+          "article",
+          "header",
+          "footer",
+        ]);
+        if (!allowedTags.has(tag)) {
+          return escapeHtml(node.textContent || "");
+        }
+        const attrs = [];
+        const style = extractInlineStyle(node);
+        if (style) attrs.push(`style="${style}"`);
+        if (tag === "a") {
+          const href = node.getAttribute("href");
+          if (href) attrs.push(`href="${escapeHtml(href)}"`);
+        }
+        if (tag === "img") {
+          const src = node.getAttribute("src") || "";
+          const alt = node.getAttribute("alt") || "图片";
+          const title = node.getAttribute("title") || "";
+          attrs.push(`src="${escapeHtml(src)}"`);
+          attrs.push(`alt="${escapeHtml(alt)}"`);
+          if (title) attrs.push(`title="${escapeHtml(title)}"`);
+          return `<img ${attrs.join(" ")}>`;
+        }
+        const inner = Array.from(node.childNodes)
+          .map((child) => sanitizeNodeToHtml(child))
+          .join("");
+        return `<${tag}${attrs.length ? " " + attrs.join(" ") : ""}>${inner}</${tag}>`;
+      }
+
+
+      function safeMarkedParse(text) {
+        try {
+          if (window.marked && typeof marked.parse === "function") {
+            return marked.parse(text);
+          }
+        } catch (e) {
+          // fall through to basic rendering
+        }
+        return escapeHtml(text).replace(/\n/g, "<br>");
+      }
+
+      function escapeHtml(input) {
+        return String(input)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function renderStyleGrid() {
+        const grid = document.getElementById("style-grid");
+        grid.innerHTML = "";
+        STYLES.forEach((style) => {
+          const btn = document.createElement("button");
+          const isActive = style.id === state.styleId;
+          btn.className = `style-card ${isActive ? "active" : ""}`;
+          btn.innerHTML = `
+            <div class="style-card-top">
+              <div class="style-card-name">${style.name}</div>
+              <div class="style-card-tag">${getStyleCategory(style.id)}</div>
+            </div>
+            <div class="style-card-sample" style="${buildNoteStyleSampleStyle(style)}">
+              <h4 style="${buildNoteStyleHeadingStyle(style)}">二级标题示例</h4>
+              <p style="${buildNoteStyleParagraphStyle(style)}">展示标题、正文和气质差异。</p>
+            </div>
+            <div class="style-card-meta">${getStyleDescription(style.id)}</div>
+          `;
+          btn.onclick = () => {
+            state.styleId = style.id;
+            renderStyleGrid();
+            updatePreview();
+            saveState();
+          };
+          grid.appendChild(btn);
+        });
+      }
+
+      function getStyleCategory(styleId) {
+        if (["tech", "wired", "coder"].includes(styleId)) return "技术";
+        if (["nyt", "ft", "magazine", "deepread", "medium"].includes(styleId)) return "长文";
+        if (["apple", "jonyive", "default", "minimal"].includes(styleId)) return "极简";
+        return "通用";
+      }
+
+      function getStyleDescription(styleId) {
+        const map = {
+          minimal: "默认公众号感，稳妥通用。",
+          tech: "蓝黑高对比，更适合科技与教程。",
+          elegant: "柔和雅致，适合品牌与女性向内容。",
+          deepread: "报刊阅读感，适合深度文章。",
+          magazine: "杂志排版感更强，视觉层次更明显。",
+          nyt: "纽约时报式专栏风格，适合评论与观点。",
+          ft: "金融时报式暖纸张感，适合分析解读。",
+          jonyive: "黑白极简，产品叙述更高级。",
+          wired: "数字媒体感强，适合趋势与科技内容。",
+          medium: "长文阅读友好，段落节奏舒展。",
+          apple: "克制干净，适合教程与品牌介绍。",
+          claude: "温暖细腻，适合思考型表达。",
+          coder: "终端质感强，适合工程技术内容。",
+        };
+        return map[styleId] || "快速切换整体视觉风格。";
+      }
+
+      function buildNoteStyleSampleStyle(style) {
+        return [
+          `background:${style.bg}`,
+          `color:${style.text}`,
+        ].join("; ");
+      }
+
+      function buildNoteStyleHeadingStyle(style) {
+        const accentMap = {
+          minimal: "#3498DB",
+          tech: "#60A5FA",
+          elegant: "#D9487F",
+          deepread: "#6B7280",
+          magazine: "#B85C5C",
+          nyt: "#111827",
+          ft: "#C97B4B",
+          jonyive: "#111827",
+          wired: "#22D3EE",
+          medium: "#111827",
+          apple: "#111827",
+          claude: "#C47A45",
+          coder: "#34D399",
+        };
+        return `color:${accentMap[style.id] || style.text};`;
+      }
+
+      function buildNoteStyleParagraphStyle(style) {
+        return `color:${style.text}; opacity:0.88;`;
+      }
+
+      function handleImageUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          state.coverImage = e.target.result;
+          updatePreview();
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function handleBodyImageUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const id = Date.now().toString();
+          state.bodyImages[id] = e.target.result;
+          const textarea = document.getElementById("input-content");
+          textarea.value = textarea.value + `\n![插图](img:${id})\n`;
+          updatePreview();
+          updateImageList();
+          input.value = "";
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function clearImage() {
+        state.coverImage = null;
+        document.getElementById("cover-image-upload").value = "";
+        updatePreview();
+      }
+
+      // ==================== 图片管理 ====================
+      function updateImageList() {
+        const list = document.getElementById("image-list");
+        const images = Object.entries(state.bodyImages);
+        if (images.length === 0) {
+          list.innerHTML =
+            '<p class="col-span-3 text-xs text-gray-400 text-center py-4">暂无图片</p>';
+          return;
+        }
+        list.innerHTML = images
+          .map(
+            ([id, src]) => `
+          <div class="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer" onclick="copyImageRef('${id}')">
+            <img src="${src}" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <button class="text-white hover:text-red-400 p-1" onclick="event.stopPropagation(); deleteBodyImage('${id}')" title="删除">
+                <i data-lucide="trash-2" size="14"></i>
+              </button>
+            </div>
+          </div>
+        `,
+          )
+          .join("");
+        lucide.createIcons();
+      }
+
+      function deleteBodyImage(id) {
+        delete state.bodyImages[id];
+        updatePreview();
+        updateImageList();
+      }
+
+      function copyImageRef(id) {
+        navigator.clipboard.writeText(`![截图](img:${id})`).then(() => {
+          // 可选：显示复制成功的提示
+        });
+      }
+
+      // ==================== 核心：渲染与包裹逻辑 ====================
+      const BASE_BODY_PADDING = 32;
+      const BASE_OVERFLOW_BUFFER = 40;
+      let extraOverflowPadding = 0;
+      let overflowRerenderCount = 0;
+      let fontRerenderPending = false;
+
+      function getBodyPadding() {
+        return BASE_BODY_PADDING + extraOverflowPadding;
+      }
+
+      function getOverflowBuffer() {
+        return BASE_OVERFLOW_BUFFER + extraOverflowPadding;
+      }
+
+      function updatePreview(options = {}) {
+        const { fromOverflowGuard = false, fromFontReflow = false } = options;
+        if (!fromOverflowGuard && !fromFontReflow) {
+          overflowRerenderCount = 0;
+          extraOverflowPadding = 0;
+        }
+        const container = document.getElementById("preview-canvas");
+        container.innerHTML = "";
+
+        const title = document.getElementById("input-title").value;
+        const date = document.getElementById("input-date").value;
+        const tag = document.getElementById("input-tag").value;
+        const intro = document.getElementById("input-intro").value;
+        const rawContent = document.getElementById("input-content").value;
+
+        state.bodySize = document.getElementById("body-size").value;
+        state.titleSize = document.getElementById("title-size").value;
+
+        const baseSize = document.getElementById("heading-scale").value;
+        document.getElementById("heading-scale-val").innerText =
+          baseSize + "px";
+        document.getElementById("dynamic-heading-style").innerHTML = `
+                .markdown-body h1 { font-size: ${baseSize}px !important; line-height: 1.5 !important; }
+                .markdown-body h2 { font-size: ${Math.round(baseSize * 0.75)}px !important; line-height: 1.45 !important; margin-top: 0.5em !important; margin-bottom: 0.3em !important; }
+                .markdown-body h3 { font-size: ${Math.round(baseSize * 0.6)}px !important; line-height: 1.4 !important; margin-top: 0.5em !important; }
+                .markdown-body h4 { font-size: ${Math.round(baseSize * 0.5)}px !important; line-height: 1.35 !important; }
+            `;
+
+        document.getElementById("body-size-val").innerText =
+          state.bodySize + "px";
+        document.getElementById("title-size-val").innerText =
+          state.titleSize + "px";
+
+        const sizeVal = document.getElementById("canvas-size").value.split("x");
+        const cardWidth = sizeVal[0];
+        const cardHeight = sizeVal[1];
+        const styleConfig = STYLES.find((s) => s.id === state.styleId) || STYLES[0];
+        if (styleConfig && styleConfig.id !== state.styleId) {
+          state.styleId = styleConfig.id;
+          renderStyleGrid();
+        }
+        const manualPages = rawContent.split("@---");
+        const autoPaginate =
+          document.getElementById("auto-paginate")?.checked ?? true;
+
+        const createCardWithDownload = (elementHTML, filename) => {
+          const wrapper = document.createElement("div");
+          wrapper.className = "relative group";
+
+          const card = document.createElement("div");
+          card.className = `card-wrapper ${styleConfig.class}`;
+          card.style.width = cardWidth + "px";
+          card.style.height = cardHeight + "px";
+          card.innerHTML = elementHTML;
+
+          const btn = document.createElement("button");
+          btn.className =
+            "absolute top-3 right-3 z-50 bg-black/60 hover:bg-black text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg cursor-pointer transform hover:scale-110";
+          btn.title = "保存为JPG";
+          btn.innerHTML = '<i data-lucide="download" size="16"></i>';
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            saveSingleCard(card, filename, btn);
+          };
+
+          wrapper.appendChild(card);
+          wrapper.appendChild(btn);
+          return wrapper;
+        };
+
+        container.appendChild(
+          createCardWithDownload(
+            renderCoverHTML(styleConfig, title, date, tag, intro),
+            `rednote_cover.jpg`,
+          ),
+        );
+
+        let pageCounter = 0;
+        manualPages.forEach((pageText) => {
+          if (!pageText.trim()) return;
+          const processedText = pageText
+            .replace(
+              /::: row\n([\s\S]*?)\n:::/g,
+              '<div class="img-row">$1</div>',
+            )
+            .replace(/@---/g, "&#64;---");
+
+          if (!autoPaginate) {
+            const htmlContent = safeMarkedParse(processedText);
+            pageCounter += 1;
+            container.appendChild(
+              createCardWithDownload(
+                renderPageHTML(styleConfig, htmlContent, pageCounter, date),
+                `rednote_page_${pageCounter}.jpg`,
+              ),
+            );
+            return;
+          }
+
+          const htmlContent = safeMarkedParse(processedText);
+          const subPages = paginateHtmlToPages(
+            htmlContent,
+            styleConfig,
+            date,
+            cardWidth,
+            cardHeight,
+          );
+          subPages.forEach((pageHtml) => {
+            pageCounter += 1;
+            container.appendChild(
+              createCardWithDownload(
+                renderPageHTML(styleConfig, pageHtml, pageCounter, date),
+                `rednote_page_${pageCounter}.jpg`,
+              ),
+            );
+          });
+        });
+        lucide.createIcons();
+        updateImageList();
+        saveState();
+        scheduleOverflowGuard(container);
+        scheduleFontReflow();
+      }
+
+      function paginateHtmlToPages(html, styleConfig, date, cardWidth, cardHeight) {
+        const source = document.createElement("div");
+        source.innerHTML = html;
+        let nodes = Array.from(source.childNodes).filter((node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            return node.textContent.trim().length > 0;
+          }
+          return true;
+        });
+        if (
+          nodes.length === 1 &&
+          nodes[0].nodeType === Node.ELEMENT_NODE &&
+          ["div", "section", "article", "main"].includes(
+            nodes[0].tagName.toLowerCase(),
+          )
+        ) {
+          const innerNodes = Array.from(nodes[0].childNodes).filter((node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              return node.textContent.trim().length > 0;
+            }
+            return true;
+          });
+          if (innerNodes.length) nodes = innerNodes;
+        }
+
+        const pages = [];
+        let cursor = 0;
+
+        while (cursor < nodes.length) {
+          const { wrapper, body } = createMeasureCard(
+            styleConfig,
+            pages.length + 1,
+            date,
+            cardWidth,
+            cardHeight,
+          );
+          let pageDone = false;
+
+          while (cursor < nodes.length) {
+            const node = nodes[cursor];
+            body.appendChild(node.cloneNode(true));
+
+            if (!isOverflowing(body)) {
+              cursor += 1;
+              continue;
+            }
+
+            body.removeChild(body.lastChild);
+
+            if (!body.childNodes.length) {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                const tag = node.tagName.toLowerCase();
+                if (tag === "ul" || tag === "ol") {
+                  const splitList = splitListNodeToFit(node, body);
+                  if (splitList.fitNode) {
+                    body.appendChild(splitList.fitNode);
+                    pages.push(body.innerHTML);
+                    wrapper.remove();
+                    if (splitList.restNode) {
+                      nodes.splice(cursor + 1, 0, splitList.restNode);
+                    }
+                    cursor += 1;
+                    pageDone = true;
+                    break;
+                  }
+                }
+              }
+              const split = splitTextNodeToFit(node, body);
+              if (split.fitNode) {
+                body.appendChild(split.fitNode);
+                pages.push(body.innerHTML);
+                wrapper.remove();
+                if (split.restNode) {
+                  nodes.splice(cursor + 1, 0, split.restNode);
+                }
+                cursor += 1;
+                pageDone = true;
+                break;
+              }
+
+              // Fallback: allow oversize node in its own page.
+              body.appendChild(node.cloneNode(true));
+              pages.push(body.innerHTML);
+              wrapper.remove();
+              cursor += 1;
+              pageDone = true;
+              break;
+            }
+
+            pages.push(body.innerHTML);
+            wrapper.remove();
+            pageDone = true;
+            break;
+          }
+
+          if (!pageDone) {
+            if (body.childNodes.length) {
+              pages.push(body.innerHTML);
+            }
+            wrapper.remove();
+          }
+        }
+
+        return pages.length ? pages : [html];
+      }
+
+      function createMeasureCard(styleConfig, pageNum, date, cardWidth, cardHeight) {
+        const wrapper = document.createElement("div");
+        wrapper.className = `card-wrapper ${styleConfig.class}`;
+        wrapper.style.width = cardWidth + "px";
+        wrapper.style.height = cardHeight + "px";
+        wrapper.style.position = "absolute";
+        wrapper.style.left = "-99999px";
+        wrapper.style.top = "0";
+        wrapper.style.visibility = "hidden";
+        wrapper.innerHTML = renderPageHTML(styleConfig, "", pageNum, date);
+
+        const body = wrapper.querySelector(".markdown-body");
+        if (body) {
+          body.style.fontSize = `${state.bodySize}px`;
+        }
+
+        document.body.appendChild(wrapper);
+        return { wrapper, body };
+      }
+
+      function isOverflowing(el) {
+        if (!el) return false;
+        const lastNode = getLastContentNode(el);
+        if (!lastNode) return false;
+        const bodyRect = el.getBoundingClientRect();
+        const nodeBottom = getNodeBottom(lastNode);
+        const usedHeight = nodeBottom - bodyRect.top;
+        return usedHeight > el.clientHeight - getOverflowBuffer();
+      }
+
+      function getLastContentNode(container) {
+        if (!container) return null;
+        const nodes = Array.from(container.childNodes);
+        for (let i = nodes.length - 1; i >= 0; i -= 1) {
+          const node = nodes[i];
+          if (node.nodeType === Node.TEXT_NODE) {
+            if (node.textContent.trim()) return node;
+            continue;
+          }
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            if (
+              node.tagName.toLowerCase() === "br" ||
+              node.textContent.trim()
+            ) {
+              return node;
+            }
+          }
+        }
+        return null;
+      }
+
+      function getNodeBottom(node) {
+        if (!node) return 0;
+        if (node.nodeType === Node.TEXT_NODE) {
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          const rects = range.getClientRects();
+          if (rects.length) {
+            return rects[rects.length - 1].bottom;
+          }
+          return 0;
+        }
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const rect = node.getBoundingClientRect();
+          const styles = getComputedStyle(node);
+          const marginBottom = parseFloat(styles.marginBottom || "0") || 0;
+          return rect.bottom + marginBottom;
+        }
+        return 0;
+      }
+
+      function scheduleOverflowGuard(container) {
+        if (!container || overflowRerenderCount >= 2) return;
+        const bodies = Array.from(
+          container.querySelectorAll(".card-wrapper .markdown-body"),
+        );
+        if (!bodies.length) return;
+        const hasOverflow = bodies.some(
+          (body) =>
+            Math.ceil(body.scrollHeight) >
+            Math.floor(body.clientHeight) - 2,
+        );
+        if (!hasOverflow) return;
+        overflowRerenderCount += 1;
+        extraOverflowPadding = Math.min(extraOverflowPadding + 16, 48);
+        updatePreview({ fromOverflowGuard: true });
+      }
+
+      function scheduleFontReflow() {
+        if (!document.fonts || document.fonts.status === "loaded") return;
+        if (fontRerenderPending) return;
+        fontRerenderPending = true;
+        document.fonts.ready.then(() => {
+          fontRerenderPending = false;
+          updatePreview({ fromFontReflow: true });
+        });
+      }
+
+      function splitTextNodeToFit(node, body) {
+        if (!body) return { fitNode: null, restNode: null };
+
+        const tagName =
+          node.nodeType === Node.ELEMENT_NODE
+            ? node.tagName.toLowerCase()
+            : "p";
+
+        if (
+          ![
+            "p",
+            "blockquote",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "div",
+            "section",
+            "article",
+            "li",
+          ].includes(tagName)
+        ) {
+          return { fitNode: null, restNode: null };
+        }
+
+        const rawText = node.textContent.trim();
+        if (!rawText) return { fitNode: null, restNode: null };
+
+        let low = 1;
+        let high = rawText.length;
+        let best = 0;
+
+        const probe = document.createElement(tagName);
+        while (low <= high) {
+          const mid = Math.floor((low + high) / 2);
+          probe.textContent = rawText.slice(0, mid);
+          body.appendChild(probe);
+          const fits = !isOverflowing(body);
+          body.removeChild(probe);
+
+          if (fits) {
+            best = mid;
+            low = mid + 1;
+          } else {
+            high = mid - 1;
+          }
+        }
+
+        if (best === 0) return { fitNode: null, restNode: null };
+
+        const fitNode = document.createElement(tagName);
+        fitNode.textContent = rawText.slice(0, best);
+
+        const restText = rawText.slice(best).trimStart();
+        const restNode = restText
+          ? (() => {
+              const n = document.createElement(tagName);
+              n.textContent = restText;
+              return n;
+            })()
+          : null;
+
+        return { fitNode, restNode };
+      }
+
+      function splitListNodeToFit(node, body) {
+        if (!body || node.nodeType !== Node.ELEMENT_NODE) {
+          return { fitNode: null, restNode: null };
+        }
+        const tagName = node.tagName.toLowerCase();
+        if (tagName !== "ul" && tagName !== "ol") {
+          return { fitNode: null, restNode: null };
+        }
+
+        const items = Array.from(node.querySelectorAll(":scope > li"));
+        if (!items.length) return { fitNode: null, restNode: null };
+
+        const fitList = document.createElement(tagName);
+        fitList.className = node.className || "";
+        if (node.getAttribute("style")) fitList.setAttribute("style", node.getAttribute("style"));
+
+        let lastFitIndex = -1;
+        for (let i = 0; i < items.length; i += 1) {
+          fitList.appendChild(items[i].cloneNode(true));
+          body.appendChild(fitList);
+          const fits = !isOverflowing(body);
+          body.removeChild(fitList);
+          if (!fits) {
+            fitList.removeChild(fitList.lastChild);
+            break;
+          }
+          lastFitIndex = i;
+        }
+
+        if (lastFitIndex < 0) {
+          return { fitNode: null, restNode: null };
+        }
+
+        const restList = document.createElement(tagName);
+        restList.className = node.className || "";
+        if (node.getAttribute("style")) restList.setAttribute("style", node.getAttribute("style"));
+        for (let i = lastFitIndex + 1; i < items.length; i += 1) {
+          restList.appendChild(items[i].cloneNode(true));
+        }
+
+        return {
+          fitNode: fitList,
+          restNode: restList.childNodes.length ? restList : null,
+        };
+      }
+
+      // ==================== 极速 JPG 导出逻辑 ====================
+      async function saveSingleCard(element, filename, btn) {
+        const originalIcon = btn.innerHTML;
+        btn.innerHTML =
+          '<i data-lucide="loader-2" class="animate-spin" size="16"></i>';
+        btn.classList.add("bg-blue-600", "opacity-100");
+        btn.classList.remove("bg-black/60", "group-hover:opacity-100");
+
+        try {
+          const dataUrl = await htmlToImage.toJpeg(element, {
+            quality: 0.9,
+            pixelRatio: 2,
+            backgroundColor: "#ffffff",
+          });
+          saveAs(dataUrl, filename);
+        } catch (error) {
+          console.error("保存失败:", error);
+          alert("保存出错");
+        } finally {
+          setTimeout(() => {
+            btn.innerHTML = originalIcon;
+            btn.classList.remove("bg-blue-600", "opacity-100");
+            btn.classList.add("bg-black/60");
+            lucide.createIcons();
+          }, 300);
+        }
+      }
+
+      async function downloadAll() {
+        const btn = document.querySelector('button[onclick="downloadAll()"]');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="14"></i> 导出中...`;
+
+        try {
+          const zip = new JSZip();
+          const cards = Array.from(document.querySelectorAll(".card-wrapper"));
+
+          // 并行导出所有卡片
+          const dataUrls = await Promise.all(
+            cards.map((card) =>
+              htmlToImage.toJpeg(card, {
+                quality: 0.9,
+                pixelRatio: 2,
+                backgroundColor: "#ffffff",
+              }),
+            ),
+          );
+
+          dataUrls.forEach((dataUrl, index) => {
+            const imgData = dataUrl.split(",")[1];
+            zip.file(`rednote_page_${index + 1}.jpg`, imgData, {
+              base64: true,
+            });
+          });
+
+          const content = await zip.generateAsync({ type: "blob" });
+          saveAs(content, "RedNote_Images_JPG.zip");
+        } catch (error) {
+          console.error("导出失败:", error);
+          alert("导出出错");
+        } finally {
+          btn.innerHTML = originalText;
+          lucide.createIcons();
+        }
+      }
+
+      function renderCoverHTML(config, title, date, tag, intro) {
+        const renderer = themeCoverRenderers[config.id];
+        const showDate =
+          document.getElementById("show-date")?.checked ?? true;
+        const safeDate = showDate ? date || getToday() : "";
+        if (renderer) return renderer(config, title, safeDate, tag, intro);
+        return `<div class="card-bg justify-center text-center"><h1 class="font-bold text-gray-900 mt-4" style="font-size: ${state.titleSize}px">${title}</h1></div>`;
+      }
+
+      function renderPageHTML(config, html, pageNum, date) {
+        const showDate =
+          document.getElementById("show-date")?.checked ?? true;
+        const showPageNum =
+          document.getElementById("show-page-num")?.checked ?? true;
+        const dateText = showDate ? date || getToday() : "";
+        const pageText = showPageNum ? pageNum : "";
+        const headerHtml =
+          showDate || showPageNum
+            ? `<div class="page-meta"><span>${dateText}</span><span class="badge">${pageText ? `P.${pageText}` : ""}</span></div>`
+            : "";
+
+        if (config.id === "minimal") {
+          // 更新了浅蓝色内页的页眉配色
+          return `<div class="card-bg relative flex flex-col h-full"><div class="flex justify-between items-center mb-6 pb-4" style="border-bottom: 1px solid #AED6F1;"><span class="text-xs font-bold tracking-widest" style="color: #AED6F1;">${dateText}</span><span class="font-bold text-xs px-2 py-1 rounded" style="background-color: #D6EAF8; color: #1E3A5F;">${pageText ? `0${pageText}` : ""}</span></div><div class="markdown-body flex-1 min-h-0 overflow-hidden" style="font-size: ${state.bodySize}px; padding-bottom: ${getBodyPadding()}px;">${html}</div></div>`;
+        }
+        if (config.id === "serif")
+          return `<div class="card-bg"><div class="flex justify-between border-b border-gray-300 pb-2 mb-2 text-xs text-gray-400 font-bold tracking-widest"><span>${dateText}</span><span>${pageText ? `第 ${pageText} 页` : ""}</span></div><div class="markdown-body flex-1 min-h-0 overflow-hidden" style="font-size: ${state.bodySize}px; padding-bottom: ${getBodyPadding()}px;">${html}</div></div>`;
+        if (config.id === "acid")
+          return `<div class="card-bg"><div class="flex justify-between border-b-2 border-black pb-2 mb-2 font-mono text-xs font-bold"><span>${dateText}</span><span>${pageText ? `P.0${pageText}` : ""}</span></div><div class="markdown-body flex-1 min-h-0 overflow-hidden" style="font-size: ${state.bodySize}px; padding-bottom: ${getBodyPadding()}px;">${html}</div></div>`;
+        if (config.id === "tech") {
+          return `<div class="card-bg relative flex flex-col h-full"><div class="grid-bg"></div><div class="relative z-10 flex flex-col h-full">${headerHtml}<div class="markdown-body flex-1 min-h-0 overflow-hidden" style="font-size: ${state.bodySize}px; padding-bottom: ${getBodyPadding()}px;">${html}</div></div></div>`;
+        }
+        return `<div class="card-bg"><div class="flex flex-col h-full">${headerHtml}<div class="markdown-body flex-1 min-h-0 overflow-hidden" style="font-size: ${state.bodySize}px; padding-bottom: ${getBodyPadding()}px;">${html}</div></div></div>`;
+      }
+
+      // Helper functions
+      let currentZoom = 1.0;
+      let isGridView = false;
+      function changeZoom(delta) {
+        currentZoom = parseFloat((currentZoom + delta).toFixed(1));
+        currentZoom = Math.min(Math.max(currentZoom, 0.2), 2.0);
+        const canvas = document.getElementById("preview-canvas");
+        canvas.style.transform = `scale(${currentZoom})`;
+        if (isGridView) canvas.style.width = `${100 / currentZoom}%`;
+        else canvas.style.width = "100%";
+        document.getElementById("zoom-val").innerText =
+          Math.round(currentZoom * 100) + "%";
+      }
+
+      function toggleLayout() {
+        isGridView = !isGridView;
+        const canvas = document.getElementById("preview-canvas");
+        const btn = document.getElementById("layout-btn");
+        if (isGridView) {
+          canvas.classList.remove("flex-col", "items-center");
+          canvas.classList.add(
+            "flex-row",
+            "flex-wrap",
+            "justify-center",
+            "items-start",
+          );
+          canvas.style.width = `${100 / currentZoom}%`;
+          btn.innerHTML = `<i data-lucide="list" size="16"></i> <span>列表视图</span>`;
+          btn.classList.add("text-blue-600");
+        } else {
+          canvas.classList.add("flex-col", "items-center");
+          canvas.classList.remove(
+            "flex-row",
+            "flex-wrap",
+            "justify-center",
+            "items-start",
+          );
+          canvas.style.width = "100%";
+          btn.innerHTML = `<i data-lucide="layout-grid" size="16"></i> <span>网格视图</span>`;
+          btn.classList.remove("text-blue-600");
+        }
+        lucide.createIcons();
+      }
+
+      function getToday() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, "0");
+        const d = String(now.getDate()).padStart(2, "0");
+        return `${y}/${m}/${d}`;
+      }
+    </script>
+  </body>
+</html>
