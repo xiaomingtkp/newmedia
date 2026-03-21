@@ -4002,6 +4002,28 @@
       return container.innerHTML;
     }
 
+    function enforceCodeBlockContrast(root) {
+      if (!root) return;
+      root.querySelectorAll("pre").forEach((pre) => {
+        const styleText = pre.getAttribute("style") || "";
+        const hasBg = /(^|;)\s*background(?:-color)?\s*:/i.test(styleText);
+        const hasColor = /(^|;)\s*color\s*:/i.test(styleText);
+        if (!hasBg) pre.style.background = "#111827";
+        if (!hasColor) pre.style.color = "#e5e7eb";
+        if (!pre.style.padding) pre.style.padding = "12px";
+        if (!pre.style.borderRadius) pre.style.borderRadius = "10px";
+        if (!pre.style.overflow) pre.style.overflow = "auto";
+        if (!pre.style.fontSize) pre.style.fontSize = "12px";
+        if (!pre.style.lineHeight) pre.style.lineHeight = "1.65";
+      });
+
+      root.querySelectorAll("pre code").forEach((code) => {
+        if (!code.style.color) code.style.color = "inherit";
+        if (!code.style.background) code.style.background = "transparent";
+        if (!code.style.padding) code.style.padding = "0";
+      });
+    }
+
     htmlContent = sanitizePastedHtml(htmlContent);
     editor.value = htmlContent;
     editorRich.innerHTML = htmlContent;
@@ -4012,6 +4034,7 @@
       const doc = parser.parseFromString(html, "text/html");
       sanitizeHtmlContainer(doc.body);
       convertGridToTable(doc);
+      enforceCodeBlockContrast(doc.body);
       const imageResult = inlineImages ? await inlineImagesForCopy(doc.body) : null;
       return {
         html: doc.body.innerHTML,
