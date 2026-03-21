@@ -4072,6 +4072,48 @@
       });
     }
 
+    function normalizeCodeBlockStyles(root) {
+      if (!root) return;
+
+      // Unified block-code style across all themes (raw + custom),
+      // so reading experience stays consistent after copy to WeChat.
+      root.querySelectorAll("pre").forEach((pre) => {
+        pre.style.margin = "24px 0";
+        pre.style.padding = "18px 20px";
+        pre.style.background = "linear-gradient(135deg, #1f2937 0%, #111827 100%)";
+        pre.style.color = "#f8fafc";
+        pre.style.borderRadius = "12px";
+        pre.style.overflowX = "auto";
+        pre.style.lineHeight = "1.65";
+        pre.style.fontSize = "13px";
+        pre.style.border = "1px solid rgba(148, 163, 184, 0.28)";
+        pre.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 22px rgba(15, 23, 42, 0.16)";
+      });
+
+      root.querySelectorAll("code").forEach((code) => {
+        const inPre = code.parentElement?.tagName?.toLowerCase() === "pre";
+        if (inPre) return;
+        code.style.fontFamily = '"SF Mono", "JetBrains Mono", Menlo, Consolas, monospace';
+        code.style.fontSize = "0.92em";
+        code.style.padding = "2px 6px";
+        code.style.background = "#eef2f7";
+        code.style.color = "#0f172a";
+        code.style.borderRadius = "6px";
+        code.style.border = "1px solid rgba(148, 163, 184, 0.35)";
+        code.style.fontWeight = "500";
+      });
+
+      root.querySelectorAll("pre code").forEach((code) => {
+        code.style.background = "transparent";
+        code.style.color = "inherit";
+        code.style.border = "none";
+        code.style.padding = "0";
+        code.style.borderRadius = "0";
+        code.style.fontSize = "inherit";
+        code.style.fontWeight = "inherit";
+      });
+    }
+
     htmlContent = sanitizePastedHtml(htmlContent);
     editor.value = htmlContent;
     editorRich.innerHTML = htmlContent;
@@ -4082,6 +4124,7 @@
       const doc = parser.parseFromString(html, "text/html");
       sanitizeHtmlContainer(doc.body);
       convertGridToTable(doc);
+      normalizeCodeBlockStyles(doc.body);
       enforceCodeBlockContrast(doc.body);
       const imageResult = inlineImages ? await inlineImagesForCopy(doc.body) : null;
       return {
