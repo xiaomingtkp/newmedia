@@ -2624,7 +2624,10 @@
         document.activeElement === editorRich;
       const prevRatio = preview.scrollTop / (preview.scrollHeight - preview.clientHeight || 1);
 
-      preview.innerHTML = buildWeChatHtml();
+      const wechatHtml = buildWeChatHtml();
+      const prepared = await prepareWechatCompatibleHtml(wechatHtml, { inlineImages: false });
+      if (renderToken !== previewRenderToken) return;
+      preview.innerHTML = prepared.html;
       await resolveImgProtocolInRoot(preview);
       if (renderToken !== previewRenderToken) return;
       wrapPreviewTables(preview);
