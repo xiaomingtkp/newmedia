@@ -1944,9 +1944,8 @@
           <div class="flex items-center bg-gray-50 rounded-lg p-1">
             <button
               id="toolbar-zoom-out"
-              onclick="
-                handleToolbarZoom(-0.1);
-              "
+              type="button"
+              data-toolbar-action="zoom-out"
               class="w-8 h-8 flex items-center justify-center hover:bg-white rounded-md text-gray-600 shadow-sm active:scale-90"
             >
               <i data-lucide="minus" size="16"></i>
@@ -1958,18 +1957,16 @@
             >
             <button
               id="toolbar-zoom-in"
-              onclick="
-                handleToolbarZoom(0.1);
-              "
+              type="button"
+              data-toolbar-action="zoom-in"
               class="w-8 h-8 flex items-center justify-center hover:bg-white rounded-md text-gray-600 shadow-sm active:scale-90"
             >
               <i data-lucide="plus" size="16"></i>
             </button>
           </div>
           <button
-            onclick="
-              handleToolbarToggleLayout();
-            "
+            type="button"
+            data-toolbar-action="toggle-layout"
             id="layout-btn"
             class="w-full h-8 flex items-center justify-center bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 rounded-lg text-xs font-bold transition-all active:scale-95 gap-2"
           >
@@ -1978,7 +1975,8 @@
         </div>
 
         <button
-          onclick="toggleToolbar()"
+          type="button"
+          data-toolbar-action="toggle-toolbar"
           id="toolbar-toggle"
           class="pointer-events-auto w-12 h-12 bg-black text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-90 transition-all duration-200 border-2 border-white/20"
         >
@@ -3148,6 +3146,7 @@
         const actions = document.getElementById("toolbar-actions");
         if (!actions) return;
         actions.hidden = !open;
+        actions.style.display = open ? "flex" : "none";
         actions.style.opacity = open ? "1" : "0";
         actions.style.transform = open ? "scale(1)" : "scale(0)";
         actions.style.pointerEvents = open ? "auto" : "none";
@@ -4859,42 +4858,19 @@
       });
 
       function bindToolbarControls() {
-        const toggleBtn = document.getElementById("toolbar-toggle");
-        const zoomOutBtn = document.getElementById("toolbar-zoom-out");
-        const zoomInBtn = document.getElementById("toolbar-zoom-in");
-        const layoutBtn = document.getElementById("layout-btn");
-        if (toggleBtn) {
-          toggleBtn.onclick = null;
-          toggleBtn.addEventListener("click", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            toggleToolbar();
-          });
-        }
-        if (zoomOutBtn) {
-          zoomOutBtn.onclick = null;
-          zoomOutBtn.addEventListener("click", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            handleToolbarZoom(-0.1);
-          });
-        }
-        if (zoomInBtn) {
-          zoomInBtn.onclick = null;
-          zoomInBtn.addEventListener("click", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            handleToolbarZoom(0.1);
-          });
-        }
-        if (layoutBtn) {
-          layoutBtn.onclick = null;
-          layoutBtn.addEventListener("click", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            handleToolbarToggleLayout();
-          });
-        }
+        document.addEventListener("click", (event) => {
+          const target = event.target instanceof Element ? event.target : null;
+          const btn = target?.closest?.("[data-toolbar-action]");
+          if (!btn) return;
+          const action = btn.getAttribute("data-toolbar-action");
+          if (!action) return;
+          event.preventDefault();
+          event.stopPropagation();
+          if (action === "toggle-toolbar") return toggleToolbar();
+          if (action === "zoom-out") return handleToolbarZoom(-0.1);
+          if (action === "zoom-in") return handleToolbarZoom(0.1);
+          if (action === "toggle-layout") return handleToolbarToggleLayout();
+        });
       }
 
       bindToolbarControls();
