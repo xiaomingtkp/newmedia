@@ -1943,6 +1943,7 @@
         >
           <div class="flex items-center bg-gray-50 rounded-lg p-1">
             <button
+              id="toolbar-zoom-out"
               onclick="
                 handleToolbarZoom(-0.1);
               "
@@ -1956,6 +1957,7 @@
               >100%</span
             >
             <button
+              id="toolbar-zoom-in"
               onclick="
                 handleToolbarZoom(0.1);
               "
@@ -4856,6 +4858,46 @@
         if (event.key === "Escape" && isToolbarOpen) hideToolbar();
       });
 
+      function bindToolbarControls() {
+        const toggleBtn = document.getElementById("toolbar-toggle");
+        const zoomOutBtn = document.getElementById("toolbar-zoom-out");
+        const zoomInBtn = document.getElementById("toolbar-zoom-in");
+        const layoutBtn = document.getElementById("layout-btn");
+        if (toggleBtn) {
+          toggleBtn.onclick = null;
+          toggleBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleToolbar();
+          });
+        }
+        if (zoomOutBtn) {
+          zoomOutBtn.onclick = null;
+          zoomOutBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            handleToolbarZoom(-0.1);
+          });
+        }
+        if (zoomInBtn) {
+          zoomInBtn.onclick = null;
+          zoomInBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            handleToolbarZoom(0.1);
+          });
+        }
+        if (layoutBtn) {
+          layoutBtn.onclick = null;
+          layoutBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            handleToolbarToggleLayout();
+          });
+        }
+      }
+
+      bindToolbarControls();
       applyToolbarVisibility(false);
     </script>
   </body>
