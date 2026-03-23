@@ -4239,6 +4239,7 @@
       let extraOverflowPadding = 0;
       let overflowRerenderCount = 0;
       let fontRerenderPending = false;
+      let previewSyncRaf = 0;
 
       function getBodyPadding() {
         return BASE_BODY_PADDING + extraOverflowPadding;
@@ -4248,8 +4249,56 @@
         return BASE_OVERFLOW_BUFFER + extraOverflowPadding;
       }
 
+      function getScrollRatio(el) {
+        if (!el) return 0;
+        const max = el.scrollHeight - el.clientHeight;
+        if (max <= 0) return 0;
+        return Math.min(1, Math.max(0, el.scrollTop / max));
+      }
+
+      function setScrollRatio(el, ratio) {
+        if (!el) return;
+        const max = el.scrollHeight - el.clientHeight;
+        if (max <= 0) return;
+        const next = Math.min(1, Math.max(0, Number(ratio) || 0));
+        el.scrollTop = Math.round(max * next);
+      }
+
+      function getEditorViewportRatio() {
+        const textarea = document.getElementById("input-content");
+        if (!textarea) return 0;
+        const scrollMax = textarea.scrollHeight - textarea.clientHeight;
+        if (scrollMax > 0) {
+          return Math.min(1, Math.max(0, textarea.scrollTop / scrollMax));
+        }
+        const len = textarea.value.length || 1;
+        const cursor =
+          typeof textarea.selectionStart === "number"
+            ? textarea.selectionStart
+            : 0;
+        return Math.min(1, Math.max(0, cursor / len));
+      }
+
+      function syncPreviewToEditorViewport() {
+        const scrollContainer = document.getElementById("scroll-container");
+        if (!scrollContainer) return;
+        setScrollRatio(scrollContainer, getEditorViewportRatio());
+      }
+
+      function queuePreviewSyncToEditor() {
+        if (previewSyncRaf) cancelAnimationFrame(previewSyncRaf);
+        previewSyncRaf = requestAnimationFrame(() => {
+          previewSyncRaf = 0;
+          syncPreviewToEditorViewport();
+        });
+      }
+
       function updatePreview(options = {}) {
         const { fromOverflowGuard = false, fromFontReflow = false, skipHydrate = false } = options;
+        const scrollContainer = document.getElementById("scroll-container");
+        const prevPreviewRatio = getScrollRatio(scrollContainer);
+        const activeEditor = document.activeElement === document.getElementById("input-content");
+        const targetRatio = activeEditor ? getEditorViewportRatio() : prevPreviewRatio;
         if (!fromOverflowGuard && !fromFontReflow) {
           overflowRerenderCount = 0;
           extraOverflowPadding = 0;
@@ -4377,6 +4426,9 @@
         lucide.createIcons();
         updateImageList();
         saveState();
+        requestAnimationFrame(() => {
+          setScrollRatio(scrollContainer, targetRatio);
+        });
         scheduleOverflowGuard(container);
         scheduleFontReflow();
       }
@@ -4879,6 +4931,14 @@
 
       bindToolbarControls();
       applyToolbarVisibility(false);
+
+      const noteEditorInput = document.getElementById("input-content");
+      if (noteEditorInput) {
+        noteEditorInput.addEventListener("input", queuePreviewSyncToEditor);
+        noteEditorInput.addEventListener("scroll", queuePreviewSyncToEditor);
+        noteEditorInput.addEventListener("keyup", queuePreviewSyncToEditor);
+        noteEditorInput.addEventListener("click", queuePreviewSyncToEditor);
+      }
     </script>
   </body>
 </html>
