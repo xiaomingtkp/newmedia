@@ -3186,10 +3186,12 @@
 
       function handleToolbarZoom(delta) {
         changeZoom(delta);
+        hideToolbar();
       }
 
       function handleToolbarToggleLayout() {
         toggleLayout();
+        hideToolbar();
       }
 
       let panelState = {
