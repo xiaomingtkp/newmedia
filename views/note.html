@@ -615,6 +615,28 @@
           transform 0.2s;
       }
 
+      #preview-canvas.list-view {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
+      }
+
+      #preview-canvas.grid-view {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(280px, 1fr));
+        justify-content: center;
+        align-items: start;
+        gap: 22px;
+        width: min(980px, 100%) !important;
+        margin: 0 auto;
+      }
+
+      #preview-canvas.grid-view .card-wrapper {
+        width: min(340px, 100%) !important;
+      }
+
       /* Markdown 样式 (无表格) */
       .markdown-body {
         line-height: 1.7;
@@ -1969,7 +1991,7 @@
             id="layout-btn"
             class="w-full h-8 flex items-center justify-center bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 rounded-lg text-xs font-bold transition-all active:scale-95 gap-2"
           >
-            <i data-lucide="layout-grid" size="16"></i> <span>切换视图</span>
+            <i data-lucide="layout-grid" size="16"></i> <span>网格视图</span>
           </button>
         </div>
       </div>
@@ -1980,7 +2002,7 @@
       >
         <div
           id="preview-canvas"
-          class="flex flex-col items-center gap-8 origin-top transition-transform duration-200 pb-32"
+          class="flex flex-col items-center gap-8 origin-top transition-transform duration-200 pb-32 list-view"
         ></div>
       </div>
     </main>
@@ -4792,24 +4814,14 @@
         const canvas = document.getElementById("preview-canvas");
         const btn = document.getElementById("layout-btn");
         if (isGridView) {
-          canvas.classList.remove("flex-col", "items-center");
-          canvas.classList.add(
-            "flex-row",
-            "flex-wrap",
-            "justify-center",
-            "items-start",
-          );
+          canvas.classList.remove("list-view");
+          canvas.classList.add("grid-view");
           canvas.style.width = `${100 / currentZoom}%`;
           btn.innerHTML = `<i data-lucide="list" size="16"></i> <span>列表视图</span>`;
           btn.classList.add("text-blue-600");
         } else {
-          canvas.classList.add("flex-col", "items-center");
-          canvas.classList.remove(
-            "flex-row",
-            "flex-wrap",
-            "justify-center",
-            "items-start",
-          );
+          canvas.classList.remove("grid-view");
+          canvas.classList.add("list-view");
           canvas.style.width = "100%";
           btn.innerHTML = `<i data-lucide="layout-grid" size="16"></i> <span>网格视图</span>`;
           btn.classList.remove("text-blue-600");
