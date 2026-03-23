@@ -1960,7 +1960,7 @@
       >
         <div
           id="toolbar-actions"
-          class="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-white/60 flex flex-col gap-2 transform origin-bottom-right transition-all duration-300 ease-out"
+          class="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-white/60 flex flex-col gap-2 mb-3 transform origin-bottom-right transition-all duration-300 ease-out"
         >
           <div class="flex items-center bg-gray-50 rounded-lg p-1">
             <button
@@ -1994,6 +1994,16 @@
             <i data-lucide="layout-grid" size="16"></i> <span>网格视图</span>
           </button>
         </div>
+
+        <button
+          type="button"
+          data-toolbar-action="toggle-toolbar"
+          id="toolbar-toggle"
+          class="pointer-events-auto w-12 h-12 bg-black text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-90 transition-all duration-200 border-2 border-white/20"
+          aria-label="打开预览工具"
+        >
+          <i data-lucide="settings-2" size="20"></i>
+        </button>
       </div>
 
       <div
@@ -3153,7 +3163,7 @@
         })();
       };
 
-      let isToolbarOpen = true;
+      let isToolbarOpen = false;
       function applyToolbarVisibility(open) {
         const actions = document.getElementById("toolbar-actions");
         if (!actions) return;
@@ -4846,14 +4856,29 @@
           if (!action) return;
           event.preventDefault();
           event.stopPropagation();
+          if (action === "toggle-toolbar") return toggleToolbar();
           if (action === "zoom-out") return handleToolbarZoom(-0.1);
           if (action === "zoom-in") return handleToolbarZoom(0.1);
           if (action === "toggle-layout") return handleToolbarToggleLayout();
         });
+
+        document.addEventListener("click", (event) => {
+          if (!isToolbarOpen) return;
+          const target = event.target instanceof Element ? event.target : null;
+          if (!target) return;
+          const inToolbar = target.closest("#toolbar-actions");
+          const onToggle = target.closest("#toolbar-toggle");
+          if (inToolbar || onToggle) return;
+          hideToolbar();
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && isToolbarOpen) hideToolbar();
+        });
       }
 
       bindToolbarControls();
-      applyToolbarVisibility(true);
+      applyToolbarVisibility(false);
     </script>
   </body>
 </html>
