@@ -3141,22 +3141,23 @@
       };
 
       let isToolbarOpen = false;
+      function applyToolbarVisibility(open) {
+        const actions = document.getElementById("toolbar-actions");
+        if (!actions) return;
+        actions.style.opacity = open ? "1" : "0";
+        actions.style.transform = open ? "scale(1)" : "scale(0)";
+        actions.style.pointerEvents = open ? "auto" : "none";
+      }
+
       function toggleToolbar() {
         isToolbarOpen = !isToolbarOpen;
-        const actions = document.getElementById("toolbar-actions");
-        const toggleIcon = document.querySelector("#toolbar-toggle i");
-        if (isToolbarOpen) {
-          actions.classList.remove("scale-0", "opacity-0");
-          toggleIcon.setAttribute("data-lucide", "x");
-        } else {
-          actions.classList.add("scale-0", "opacity-0");
-          toggleIcon.setAttribute("data-lucide", "settings-2");
-        }
-        lucide.createIcons();
+        applyToolbarVisibility(isToolbarOpen);
       }
 
       function hideToolbar() {
-        if (isToolbarOpen) toggleToolbar();
+        if (!isToolbarOpen) return;
+        isToolbarOpen = false;
+        applyToolbarVisibility(false);
       }
 
       function handleToolbarZoom(delta) {
@@ -4853,6 +4854,8 @@
       document.addEventListener("keydown", (event) => {
         if (event.key === "Escape" && isToolbarOpen) hideToolbar();
       });
+
+      applyToolbarVisibility(false);
     </script>
   </body>
 </html>
