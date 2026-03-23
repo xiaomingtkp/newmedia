@@ -1938,6 +1938,7 @@
       >
         <div
           id="toolbar-actions"
+          hidden
           class="pointer-events-auto bg-white/90 backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-white/60 flex flex-col gap-2 mb-3 transform origin-bottom-right scale-0 opacity-0 transition-all duration-300 ease-out"
         >
           <div class="flex items-center bg-gray-50 rounded-lg p-1">
@@ -3144,6 +3145,7 @@
       function applyToolbarVisibility(open) {
         const actions = document.getElementById("toolbar-actions");
         if (!actions) return;
+        actions.hidden = !open;
         actions.style.opacity = open ? "1" : "0";
         actions.style.transform = open ? "scale(1)" : "scale(0)";
         actions.style.pointerEvents = open ? "auto" : "none";
@@ -3155,7 +3157,6 @@
       }
 
       function hideToolbar() {
-        if (!isToolbarOpen) return;
         isToolbarOpen = false;
         applyToolbarVisibility(false);
       }
