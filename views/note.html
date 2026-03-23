@@ -1943,8 +1943,7 @@
           <div class="flex items-center bg-gray-50 rounded-lg p-1">
             <button
               onclick="
-                changeZoom(-0.1);
-                hideToolbar();
+                handleToolbarZoom(-0.1);
               "
               class="w-8 h-8 flex items-center justify-center hover:bg-white rounded-md text-gray-600 shadow-sm active:scale-90"
             >
@@ -1957,8 +1956,7 @@
             >
             <button
               onclick="
-                changeZoom(0.1);
-                hideToolbar();
+                handleToolbarZoom(0.1);
               "
               class="w-8 h-8 flex items-center justify-center hover:bg-white rounded-md text-gray-600 shadow-sm active:scale-90"
             >
@@ -1967,8 +1965,7 @@
           </div>
           <button
             onclick="
-              toggleLayout();
-              hideToolbar();
+              handleToolbarToggleLayout();
             "
             id="layout-btn"
             class="w-full h-8 flex items-center justify-center bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 rounded-lg text-xs font-bold transition-all active:scale-95 gap-2"
@@ -3160,6 +3157,22 @@
 
       function hideToolbar() {
         if (isToolbarOpen) toggleToolbar();
+      }
+
+      function handleToolbarZoom(delta) {
+        try {
+          changeZoom(delta);
+        } finally {
+          hideToolbar();
+        }
+      }
+
+      function handleToolbarToggleLayout() {
+        try {
+          toggleLayout();
+        } finally {
+          hideToolbar();
+        }
       }
 
       let panelState = {
@@ -4826,6 +4839,20 @@
         const d = String(now.getDate()).padStart(2, "0");
         return `${y}/${m}/${d}`;
       }
+
+      document.addEventListener("click", (event) => {
+        if (!isToolbarOpen) return;
+        const actions = document.getElementById("toolbar-actions");
+        const toggleBtn = document.getElementById("toolbar-toggle");
+        const target = event.target;
+        if (!actions || !toggleBtn || !(target instanceof Node)) return;
+        if (actions.contains(target) || toggleBtn.contains(target)) return;
+        hideToolbar();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && isToolbarOpen) hideToolbar();
+      });
     </script>
   </body>
 </html>
