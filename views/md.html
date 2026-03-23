@@ -4142,7 +4142,10 @@
         pre.style.border = "none";
         pre.style.borderRadius = "0";
         pre.style.boxShadow = "none";
-        pre.style.overflowX = "auto";
+        pre.style.overflowX = "hidden";
+        pre.style.overflowWrap = "anywhere";
+        pre.style.wordBreak = "break-word";
+        pre.style.whiteSpace = "pre-wrap";
         pre.style.lineHeight = "1.65";
         pre.style.fontSize = "13px";
         pre.style.fontFamily = '"SF Mono", "JetBrains Mono", Menlo, Consolas, monospace';
@@ -4187,6 +4190,9 @@
         code.style.borderRadius = "0";
         code.style.fontSize = "inherit";
         code.style.fontWeight = "inherit";
+        code.style.whiteSpace = "inherit";
+        code.style.wordBreak = "inherit";
+        code.style.overflowWrap = "inherit";
       });
     }
 
