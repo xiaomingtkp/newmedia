@@ -4078,34 +4078,45 @@
       // Unified Huasheng-like code block shell across all themes.
       root.querySelectorAll("pre").forEach((pre) => {
         if (pre.parentElement?.getAttribute("data-code-shell") === "1") return;
+        const parent = pre.parentNode;
+        if (!parent) return;
 
-        const shell = document.createElement("div");
+        const shell = document.createElement("table");
         shell.setAttribute("data-code-shell", "1");
+        shell.setAttribute("cellpadding", "0");
+        shell.setAttribute("cellspacing", "0");
+        shell.setAttribute("border", "0");
+        shell.setAttribute("bgcolor", "#2f3340");
         shell.setAttribute(
           "style",
           [
+            "width:100%",
             "margin:24px 0",
+            "border-collapse:separate",
+            "border-spacing:0",
             "border-radius:16px",
             "overflow:hidden",
-            "background:#2f3340",
+            "background-color:#2f3340",
             "border:1px solid rgba(66,71,88,0.9)",
             "box-shadow:0 10px 22px rgba(15,23,42,0.14)",
           ].join("; "),
         );
 
-        const topBar = document.createElement("div");
-        topBar.setAttribute(
+        const topRow = document.createElement("tr");
+        const topCell = document.createElement("td");
+        topCell.setAttribute("bgcolor", "#272b37");
+        topCell.setAttribute(
           "style",
           [
             "height:40px",
-            "background:#272b37",
+            "background-color:#272b37",
             "border-bottom:1px solid rgba(0,0,0,0.35)",
-            "display:flex",
-            "align-items:center",
             "padding:0 14px",
-            "gap:8px",
           ].join("; "),
         );
+
+        const topBar = document.createElement("div");
+        topBar.setAttribute("style", "display:flex;align-items:center;gap:8px;height:40px;");
 
         const dotColors = ["#ff5f57", "#febc2e", "#28c840"];
         dotColors.forEach((color) => {
@@ -4125,8 +4136,9 @@
 
         pre.style.margin = "0";
         pre.style.padding = "16px 20px 18px";
-        pre.style.background = "transparent";
-        pre.style.color = "#cfd5df";
+        pre.style.background = "#2f3340";
+        pre.style.color = "#d7dde7";
+        pre.style.webkitTextFillColor = "#d7dde7";
         pre.style.border = "none";
         pre.style.borderRadius = "0";
         pre.style.boxShadow = "none";
@@ -4135,10 +4147,22 @@
         pre.style.fontSize = "13px";
         pre.style.fontFamily = '"SF Mono", "JetBrains Mono", Menlo, Consolas, monospace';
 
-        const parent = pre.parentNode;
+        const bodyRow = document.createElement("tr");
+        const bodyCell = document.createElement("td");
+        bodyCell.setAttribute("bgcolor", "#2f3340");
+        bodyCell.setAttribute("style", "background:#2f3340;background-color:#2f3340;padding:0;");
+
+        topCell.appendChild(topBar);
+        topRow.appendChild(topCell);
+        bodyRow.appendChild(bodyCell);
+
+        const tbody = document.createElement("tbody");
+        tbody.appendChild(topRow);
+        tbody.appendChild(bodyRow);
+        shell.appendChild(tbody);
+
         parent.insertBefore(shell, pre);
-        shell.appendChild(topBar);
-        shell.appendChild(pre);
+        bodyCell.appendChild(pre);
       });
 
       root.querySelectorAll("code").forEach((code) => {
@@ -4156,7 +4180,8 @@
 
       root.querySelectorAll("pre code").forEach((code) => {
         code.style.background = "transparent";
-        code.style.color = "inherit";
+        code.style.color = "#d7dde7";
+        code.style.webkitTextFillColor = "#d7dde7";
         code.style.border = "none";
         code.style.padding = "0";
         code.style.borderRadius = "0";
