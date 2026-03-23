@@ -2625,7 +2625,11 @@
       const prevRatio = preview.scrollTop / (preview.scrollHeight - preview.clientHeight || 1);
 
       const wechatHtml = buildWeChatHtml();
-      const prepared = await prepareWechatCompatibleHtml(wechatHtml, { inlineImages: false });
+      const prepared = await prepareWechatCompatibleHtml(wechatHtml, {
+        inlineImages: false,
+        useCodeShell: false,
+        enforceCodeContrast: false,
+      });
       if (renderToken !== previewRenderToken) return;
       preview.innerHTML = prepared.html;
       await resolveImgProtocolInRoot(preview);
@@ -4201,13 +4205,17 @@
     editorRich.innerHTML = htmlContent;
 
     async function prepareWechatCompatibleHtml(html, options = {}) {
-      const { inlineImages = false } = options;
+      const {
+        inlineImages = false,
+        useCodeShell = true,
+        enforceCodeContrast = true,
+      } = options;
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, "text/html");
       sanitizeHtmlContainer(doc.body);
       convertGridToTable(doc);
-      normalizeCodeBlockStyles(doc.body);
-      enforceCodeBlockContrast(doc.body);
+      if (useCodeShell) normalizeCodeBlockStyles(doc.body);
+      if (enforceCodeContrast) enforceCodeBlockContrast(doc.body);
       const imageResult = inlineImages ? await inlineImagesForCopy(doc.body) : null;
       return {
         html: doc.body.innerHTML,
