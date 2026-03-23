@@ -2601,7 +2601,7 @@
       const raw = getHuashengThemeStyle(theme);
       if (raw) {
         const containerBgMatch = /background-color:\s*([^;]+);?/i.exec(raw.container || "");
-        preview.style.background = "linear-gradient(180deg, #f8f6f0 0%, #f1eee7 100%)";
+        preview.style.background = "transparent";
         preview.style.color = theme.text;
         preview.style.fontFamily = "";
         preview.dataset.rawTheme = "true";
@@ -2634,6 +2634,7 @@
       preview.innerHTML = prepared.html;
       await resolveImgProtocolInRoot(preview);
       if (renderToken !== previewRenderToken) return;
+      stripPreviewContainerDecorations(preview);
       wrapPreviewTables(preview);
       if (preview.dataset.rawTheme === "true") {
         preview.style.fontSize = "";
@@ -2664,6 +2665,21 @@
         table.parentNode.insertBefore(wrapper, table);
         wrapper.appendChild(table);
       });
+    }
+
+    function stripPreviewContainerDecorations(root) {
+      const container = root.firstElementChild;
+      if (!container || !(container instanceof HTMLElement)) return;
+      container.style.background = "transparent";
+      container.style.backgroundColor = "transparent";
+      container.style.border = "none";
+      container.style.borderTop = "none";
+      container.style.borderRight = "none";
+      container.style.borderBottom = "none";
+      container.style.borderLeft = "none";
+      container.style.boxShadow = "none";
+      container.style.outline = "none";
+      container.style.borderRadius = "0";
     }
 
     function updateStats() {
