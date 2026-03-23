@@ -505,6 +505,98 @@
       box-shadow: var(--shadow-soft);
     }
 
+    #panelPreview {
+      position: relative;
+    }
+
+    .preview-tools-wrap {
+      position: absolute;
+      right: 14px;
+      bottom: 14px;
+      z-index: 12;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .preview-tools-panel {
+      pointer-events: auto;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.68);
+      border-radius: 16px;
+      box-shadow: 0 18px 32px rgba(17, 24, 39, 0.16);
+      padding: 8px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 146px;
+      transform-origin: bottom right;
+    }
+
+    .preview-tools-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .preview-tools-icon-btn {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 8px;
+      background: #fff;
+      color: #475569;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .preview-tools-toggle {
+      width: 100%;
+      height: 30px;
+      border: none;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #475569;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .preview-tools-fab {
+      pointer-events: auto;
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.26);
+      background: linear-gradient(135deg, #1f2937, #374151);
+      color: #fff;
+      box-shadow: 0 14px 26px rgba(15, 23, 42, 0.2);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    body.md-preview-focus #panelEditor,
+    body.md-preview-focus #panelTheme,
+    body.md-preview-focus #splitterLeft,
+    body.md-preview-focus #splitterRight {
+      display: none !important;
+    }
+
+    body.md-preview-focus .layout {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+
     .splitter {
       width: 4px;
       align-self: stretch;
@@ -1228,6 +1320,19 @@
         </div>
       </div>
       <div id="preview" class="preview"></div>
+      <div class="preview-tools-wrap">
+        <div class="preview-tools-panel" id="mdPreviewToolsPanel">
+          <div class="preview-tools-row">
+            <button class="preview-tools-icon-btn" type="button" data-md-tool="zoom-out">−</button>
+            <span id="mdPreviewZoomVal" style="min-width:44px;text-align:center;font-size:12px;font-weight:800;color:#475569;">100%</span>
+            <button class="preview-tools-icon-btn" type="button" data-md-tool="zoom-in">+</button>
+          </div>
+          <button class="preview-tools-toggle" type="button" data-md-tool="focus">专注预览</button>
+        </div>
+        <button class="preview-tools-fab" id="mdPreviewToolsFab" type="button" aria-label="预览工具">
+          ⚙
+        </button>
+      </div>
     </section>
 
     <div class="splitter" id="splitterRight" title="拖动调整宽度"></div>
@@ -1313,6 +1418,9 @@
     const clearImageLibrary = document.getElementById("clearImageLibrary");
     const imageLibraryList = document.getElementById("imageLibraryList");
     const imageLibraryStats = document.getElementById("imageLibraryStats");
+    const mdPreviewToolsFab = document.getElementById("mdPreviewToolsFab");
+    const mdPreviewToolsPanel = document.getElementById("mdPreviewToolsPanel");
+    const mdPreviewZoomVal = document.getElementById("mdPreviewZoomVal");
 
     if (pageSwitch) {
       pageSwitch.value = "./md.html";
@@ -4710,6 +4818,88 @@
     renderThemes();
     applyTheme(currentTheme);
     updatePreview();
+
+    let mdToolsOpen = false;
+    let mdPreviewZoom = 1;
+    let mdPreviewFocus = false;
+
+    function applyMdToolsVisibility(open) {
+      if (!mdPreviewToolsPanel) return;
+      mdPreviewToolsPanel.style.display = open ? "flex" : "none";
+    }
+
+    function applyMdPreviewZoom() {
+      preview.style.transformOrigin = "top center";
+      preview.style.transform = `scale(${mdPreviewZoom})`;
+      preview.style.width = mdPreviewZoom === 1 ? "" : `${100 / mdPreviewZoom}%`;
+      if (mdPreviewZoomVal) mdPreviewZoomVal.textContent = `${Math.round(mdPreviewZoom * 100)}%`;
+    }
+
+    function toggleMdPreviewFocus() {
+      mdPreviewFocus = !mdPreviewFocus;
+      document.body.classList.toggle("md-preview-focus", mdPreviewFocus);
+      const focusBtn = mdPreviewToolsPanel?.querySelector('[data-md-tool="focus"]');
+      if (focusBtn) focusBtn.textContent = mdPreviewFocus ? "退出专注" : "专注预览";
+      if (!mdPreviewFocus) {
+        try {
+          const saved = localStorage.getItem("md-layout-widths");
+          if (saved) {
+            const { left, middle, right } = JSON.parse(saved);
+            if (left && middle && right) setLayoutWidths(left, middle, right);
+          } else {
+            initLayoutWidths();
+          }
+        } catch {}
+      }
+    }
+
+    mdPreviewToolsFab?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      mdToolsOpen = !mdToolsOpen;
+      applyMdToolsVisibility(mdToolsOpen);
+    });
+
+    mdPreviewToolsPanel?.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const btn = target?.closest("[data-md-tool]");
+      if (!btn) return;
+      const action = btn.getAttribute("data-md-tool");
+      if (action === "zoom-out") {
+        mdPreviewZoom = Math.max(0.6, Number((mdPreviewZoom - 0.1).toFixed(1)));
+        applyMdPreviewZoom();
+      } else if (action === "zoom-in") {
+        mdPreviewZoom = Math.min(1.8, Number((mdPreviewZoom + 0.1).toFixed(1)));
+        applyMdPreviewZoom();
+      } else if (action === "focus") {
+        toggleMdPreviewFocus();
+      }
+      mdToolsOpen = false;
+      applyMdToolsVisibility(false);
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!mdToolsOpen) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      if (target.closest("#mdPreviewToolsPanel") || target.closest("#mdPreviewToolsFab")) return;
+      mdToolsOpen = false;
+      applyMdToolsVisibility(false);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        if (mdToolsOpen) {
+          mdToolsOpen = false;
+          applyMdToolsVisibility(false);
+        } else if (mdPreviewFocus) {
+          toggleMdPreviewFocus();
+        }
+      }
+    });
+
+    applyMdToolsVisibility(false);
+    applyMdPreviewZoom();
 
     const minLeft = 260;
     const minMiddle = 280;
