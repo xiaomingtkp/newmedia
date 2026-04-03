@@ -2697,7 +2697,7 @@
           shell.style.boxShadow = "0 10px 22px rgba(15,23,42,0.14)";
 
           const topBar = document.createElement("div");
-          topBar.style.height = "40px";
+          topBar.style.height = "34px";
           topBar.style.padding = "0 14px";
           topBar.style.display = "flex";
           topBar.style.alignItems = "center";
@@ -2707,11 +2707,11 @@
 
           ["#ff5f57", "#febc2e", "#28c840"].forEach((color) => {
             const dot = document.createElement("span");
+            dot.textContent = "●";
             dot.style.display = "inline-block";
-            dot.style.width = "12px";
-            dot.style.height = "12px";
-            dot.style.borderRadius = "999px";
-            dot.style.background = color;
+            dot.style.fontSize = "12px";
+            dot.style.lineHeight = "1";
+            dot.style.color = color;
             topBar.appendChild(dot);
           });
 
@@ -2724,7 +2724,7 @@
         }
 
         pre.style.margin = "0";
-        pre.style.padding = "16px 20px 18px";
+        pre.style.padding = "14px 18px 16px";
         pre.style.background = "#2f3340";
         pre.style.color = "#d7dde7";
         pre.style.webkitTextFillColor = "#d7dde7";
@@ -4214,7 +4214,7 @@
         topCell.setAttribute(
           "style",
           [
-            "height:40px",
+            "height:34px",
             "background-color:#272b37",
             "border-bottom:1px solid rgba(0,0,0,0.35)",
             "padding:0 14px",
@@ -4222,26 +4222,18 @@
         );
 
         const topBar = document.createElement("div");
-        topBar.setAttribute("style", "display:flex;align-items:center;gap:8px;height:40px;");
+        topBar.setAttribute("style", "display:flex;align-items:center;gap:8px;height:34px;");
 
         const dotColors = ["#ff5f57", "#febc2e", "#28c840"];
         dotColors.forEach((color) => {
           const dot = document.createElement("span");
-          dot.setAttribute(
-            "style",
-            [
-              "display:inline-block",
-              "width:12px",
-              "height:12px",
-              "border-radius:999px",
-              `background:${color}`,
-            ].join("; "),
-          );
+          dot.textContent = "●";
+          dot.setAttribute("style", [`display:inline-block`, "font-size:12px", "line-height:1", `color:${color}`].join("; "));
           topBar.appendChild(dot);
         });
 
         pre.style.margin = "0";
-        pre.style.padding = "16px 20px 18px";
+        pre.style.padding = "14px 18px 16px";
         pre.style.background = "#2f3340";
         pre.style.color = "#d7dde7";
         pre.style.webkitTextFillColor = "#d7dde7";
