@@ -2636,6 +2636,7 @@
       if (renderToken !== previewRenderToken) return;
       stripPreviewContainerDecorations(preview);
       wrapPreviewTables(preview);
+      normalizePreviewCodeBlocks(preview);
       if (preview.dataset.rawTheme === "true") {
         preview.style.fontSize = "";
         preview.style.lineHeight = "";
@@ -2680,6 +2681,54 @@
       container.style.boxShadow = "none";
       container.style.outline = "none";
       container.style.borderRadius = "0";
+    }
+
+    function normalizePreviewCodeBlocks(root) {
+      if (!root) return;
+      root.querySelectorAll("pre").forEach((pre) => {
+        pre.style.margin = "20px 0";
+        pre.style.padding = "16px 20px";
+        pre.style.background = "#2f3340";
+        pre.style.color = "#d7dde7";
+        pre.style.webkitTextFillColor = "#d7dde7";
+        pre.style.border = "none";
+        pre.style.borderRadius = "14px";
+        pre.style.boxShadow = "none";
+        pre.style.overflowX = "auto";
+        pre.style.whiteSpace = "pre-wrap";
+        pre.style.overflowWrap = "anywhere";
+        pre.style.wordBreak = "break-word";
+        pre.style.lineHeight = "1.65";
+        pre.style.fontSize = "13px";
+        pre.style.fontFamily = '"SF Mono", "JetBrains Mono", Menlo, Consolas, monospace';
+      });
+
+      root.querySelectorAll("pre code").forEach((code) => {
+        code.style.background = "transparent";
+        code.style.color = "#d7dde7";
+        code.style.webkitTextFillColor = "#d7dde7";
+        code.style.border = "none";
+        code.style.padding = "0";
+        code.style.borderRadius = "0";
+        code.style.fontSize = "inherit";
+        code.style.fontWeight = "inherit";
+        code.style.whiteSpace = "inherit";
+        code.style.wordBreak = "inherit";
+        code.style.overflowWrap = "inherit";
+      });
+
+      root.querySelectorAll("code").forEach((code) => {
+        const inPre = code.parentElement?.tagName?.toLowerCase() === "pre";
+        if (inPre) return;
+        code.style.fontFamily = '"SF Mono", "JetBrains Mono", Menlo, Consolas, monospace';
+        code.style.fontSize = "0.92em";
+        code.style.padding = "2px 6px";
+        code.style.background = "#eef2f7";
+        code.style.color = "#0f172a";
+        code.style.borderRadius = "6px";
+        code.style.border = "1px solid rgba(148, 163, 184, 0.35)";
+        code.style.fontWeight = "500";
+      });
     }
 
     function updateStats() {
