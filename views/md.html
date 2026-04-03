@@ -2686,13 +2686,50 @@
     function normalizePreviewCodeBlocks(root) {
       if (!root) return;
       root.querySelectorAll("pre").forEach((pre) => {
-        pre.style.margin = "20px 0";
-        pre.style.padding = "16px 20px";
+        if (pre.parentElement?.getAttribute("data-preview-code-shell") !== "1") {
+          const shell = document.createElement("div");
+          shell.setAttribute("data-preview-code-shell", "1");
+          shell.style.margin = "20px 0";
+          shell.style.borderRadius = "14px";
+          shell.style.overflow = "hidden";
+          shell.style.background = "#2f3340";
+          shell.style.border = "1px solid rgba(66,71,88,0.9)";
+          shell.style.boxShadow = "0 10px 22px rgba(15,23,42,0.14)";
+
+          const topBar = document.createElement("div");
+          topBar.style.height = "40px";
+          topBar.style.padding = "0 14px";
+          topBar.style.display = "flex";
+          topBar.style.alignItems = "center";
+          topBar.style.gap = "8px";
+          topBar.style.background = "#272b37";
+          topBar.style.borderBottom = "1px solid rgba(0,0,0,0.35)";
+
+          ["#ff5f57", "#febc2e", "#28c840"].forEach((color) => {
+            const dot = document.createElement("span");
+            dot.style.display = "inline-block";
+            dot.style.width = "12px";
+            dot.style.height = "12px";
+            dot.style.borderRadius = "999px";
+            dot.style.background = color;
+            topBar.appendChild(dot);
+          });
+
+          const parent = pre.parentNode;
+          if (parent) {
+            parent.insertBefore(shell, pre);
+            shell.appendChild(topBar);
+            shell.appendChild(pre);
+          }
+        }
+
+        pre.style.margin = "0";
+        pre.style.padding = "16px 20px 18px";
         pre.style.background = "#2f3340";
         pre.style.color = "#d7dde7";
         pre.style.webkitTextFillColor = "#d7dde7";
         pre.style.border = "none";
-        pre.style.borderRadius = "14px";
+        pre.style.borderRadius = "0";
         pre.style.boxShadow = "none";
         pre.style.overflowX = "auto";
         pre.style.whiteSpace = "pre-wrap";
