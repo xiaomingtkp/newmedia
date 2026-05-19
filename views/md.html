@@ -743,6 +743,61 @@
       border-radius: 999px;
     }
 
+    .preview .imageflow-layer1 {
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      margin: 18px 0 8px;
+      padding-bottom: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .preview .imageflow-layer2 {
+      display: flex;
+      gap: 12px;
+      width: max-content;
+      max-width: none;
+    }
+
+    .preview .imageflow-layer3 {
+      width: 260px;
+      flex: 0 0 auto;
+    }
+
+    .preview .imageflow-img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      margin: 0;
+    }
+
+    .preview .imageflow-caption {
+      margin: 0 0 18px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .preview .md-alert {
+      margin: 18px 0;
+      padding: 12px 14px;
+      border-left: 4px solid var(--accent);
+      border-radius: 10px;
+      background: var(--accent-soft);
+    }
+
+    .preview .md-alert-title {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .preview .task-list-item {
+      list-style: none;
+      margin-left: -1em;
+    }
+
     .sidebar {
       display: flex;
       flex-direction: column;
@@ -1206,8 +1261,10 @@
         <button class="btn" data-action="ul">•</button>
         <button class="btn" data-action="ol">1.</button>
         <button class="btn" data-action="quote">❝</button>
+        <button class="btn" data-action="alert">提示</button>
         <button class="btn" data-action="check">☑︎</button>
         <button class="btn" data-action="table">表格</button>
+        <button class="btn" data-action="imageflow">滑图</button>
         <button class="btn" data-action="link">🔗</button>
         <button class="btn" data-action="img">🖼</button>
         <button class="btn" id="btnUploadImg">上传图片</button>
@@ -1271,7 +1328,7 @@
     <div class="history-header">
       <div class="history-header-left">
         <h3>历史记录</h3>
-        <span class="history-count" id="historyCount">0/20</span>
+        <span class="history-count" id="historyCount">0/30</span>
       </div>
       <button class="history-close-btn" id="btnCloseHistory">×</button>
     </div>
@@ -1491,6 +1548,7 @@
     let htmlContent = localStorage.getItem("md-editor-html") || "";
     let articleHistory = [];
     let currentArticleId = null;
+    let autoHistoryTimer = 0;
 
     const filters = ["全部", "推荐", "报刊", "极简", "技术", "文艺", "品牌", "信息"];
     const themeFilterMap = {
@@ -2403,9 +2461,13 @@
 
     const sample = `# 标题示例\n\n用这套编辑器快速排版你的内容。\n\n## 为什么好用\n- 多主题切换\n- 一键排版\n- 实时预览\n\n> 支持引用、代码块、列表等常见语法。\n\n\`\`\`js\nconsole.log('Hello Markdown');\n\`\`\``;
 
+    if (window.marked && typeof marked.setOptions === "function") {
+      marked.setOptions({ gfm: true, breaks: true, mangle: false, headerIds: false });
+    }
+
     const savedMode = localStorage.getItem("md-editor-mode");
     if (!htmlContent) {
-      htmlContent = marked.parse(sample);
+      htmlContent = renderMarkdownToHtml(sample);
     }
     editor.value = htmlContent;
     editorRich.innerHTML = htmlContent;
@@ -2629,6 +2691,7 @@
         inlineImages: false,
         useCodeShell: false,
         enforceCodeContrast: false,
+        normalizeWechatCopy: false,
       });
       if (renderToken !== previewRenderToken) return;
       preview.innerHTML = prepared.html;
@@ -2827,6 +2890,7 @@
         const start = editor.selectionStart;
         const end = editor.selectionEnd;
         editor.value = editor.value.slice(0, start) + html + editor.value.slice(end);
+        htmlContent = editor.value;
         editor.focus();
         updatePreview();
         return;
@@ -2900,7 +2964,7 @@
       const text = e.clipboardData?.getData("text/plain");
       if (text) {
         e.preventDefault();
-        htmlContent = marked.parse(text);
+        htmlContent = renderMarkdownToHtml(text);
         editorRich.innerHTML = htmlContent;
         setEditorMode("rich");
         editorRich.focus();
@@ -2928,6 +2992,8 @@
     document.querySelectorAll("[data-action]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const action = btn.dataset.action;
+        const alertHtml = "<blockquote class=\"md-alert md-alert-tip\"><span class=\"md-alert-title\">建议</span><p>这里写提示内容</p></blockquote>";
+        const imageFlowHtml = "<section class=\"imageflow-layer1\"><section class=\"imageflow-layer2\"><section class=\"imageflow-layer3\"><img class=\"imageflow-img\" src=\"https://\" alt=\"图片1\" /></section><section class=\"imageflow-layer3\"><img class=\"imageflow-img\" src=\"https://\" alt=\"图片2\" /></section></section></section><p class=\"imageflow-caption\">左右滑动查看更多</p>";
         if (editorMode === "rich") {
           if (action === "h1") return insertHtmlAtCursor("<h1>标题</h1>");
           if (action === "h2") return insertHtmlAtCursor("<h2>标题</h2>");
@@ -2937,6 +3003,7 @@
           if (action === "underline") return insertHtmlAtCursor("<u>下划线</u>");
           if (action === "strike") return insertHtmlAtCursor("<s>删除线</s>");
           if (action === "quote") return insertHtmlAtCursor("<blockquote>引用内容</blockquote>");
+          if (action === "alert") return insertHtmlAtCursor(alertHtml);
           if (action === "ul") return insertHtmlAtCursor("<ul>\n  <li>列表项</li>\n</ul>");
           if (action === "ol") return insertHtmlAtCursor("<ol>\n  <li>列表项</li>\n</ol>");
           if (action === "hr") return insertHtmlAtCursor("<hr />");
@@ -2944,6 +3011,7 @@
           if (action === "check") return insertHtmlAtCursor("<ul>\n  <li><input type=\"checkbox\" /> 待办</li>\n</ul>");
           if (action === "table")
             return insertHtmlAtCursor("<table>\n  <tr><th>标题</th><th>内容</th></tr>\n  <tr><td>示例</td><td>内容</td></tr>\n</table>");
+          if (action === "imageflow") return insertHtmlAtCursor(imageFlowHtml);
           if (action === "link") return insertHtmlAtCursor("<a href=\"https://\">链接</a>");
           if (action === "img") return insertHtmlAtCursor("<img src=\"https://\" alt=\"图片\" />");
           return;
@@ -2957,6 +3025,7 @@
           if (action === "underline") return insertHtmlAtCursor("<u>下划线</u>");
           if (action === "strike") return insertHtmlAtCursor("<s>删除线</s>");
           if (action === "quote") return insertHtmlAtCursor("<blockquote>引用内容</blockquote>");
+          if (action === "alert") return insertHtmlAtCursor(alertHtml);
           if (action === "ul") return insertHtmlAtCursor("<ul>\n  <li>列表项</li>\n</ul>");
           if (action === "ol") return insertHtmlAtCursor("<ol>\n  <li>列表项</li>\n</ol>");
           if (action === "hr") return insertHtmlAtCursor("<hr />");
@@ -2964,6 +3033,7 @@
           if (action === "check") return insertHtmlAtCursor("<ul>\n  <li><input type=\"checkbox\" /> 待办</li>\n</ul>");
           if (action === "table")
             return insertHtmlAtCursor("<table>\n  <tr><th>标题</th><th>内容</th></tr>\n  <tr><td>示例</td><td>内容</td></tr>\n</table>");
+          if (action === "imageflow") return insertHtmlAtCursor(imageFlowHtml);
           if (action === "link") return insertHtmlAtCursor("<a href=\"https://\">链接</a>");
           if (action === "img") return insertHtmlAtCursor("<img src=\"https://\" alt=\"图片\" />");
           return;
@@ -3971,6 +4041,29 @@
       return out.join("; ");
     }
 
+    function sanitizeClassText(classText) {
+      const allowed = new Set([
+        "table-scroll",
+        "imageflow-layer1",
+        "imageflow-layer2",
+        "imageflow-layer3",
+        "imageflow-img",
+        "imageflow-caption",
+        "md-alert",
+        "md-alert-note",
+        "md-alert-tip",
+        "md-alert-important",
+        "md-alert-warning",
+        "md-alert-caution",
+        "md-alert-title",
+        "task-list-item",
+      ]);
+      return String(classText || "")
+        .split(/\s+/)
+        .filter((item) => allowed.has(item))
+        .join(" ");
+    }
+
     function sanitizeHtmlContainer(root) {
       if (!root) return;
       const nodes = Array.from(root.querySelectorAll("*"));
@@ -4013,6 +4106,13 @@
           }
 
           if (name === "style") return;
+
+          if (name === "class") {
+            const safeClass = sanitizeClassText(value);
+            if (safeClass) el.setAttribute("class", safeClass);
+            else el.removeAttribute("class");
+            return;
+          }
 
           if (tag === "a" && name === "href") {
             if (!isSafeUrl(value, "link")) el.removeAttribute("href");
@@ -4096,6 +4196,92 @@
       return Object.entries(map)
         .map(([k, v]) => `${k}: ${v}`)
         .join("; ");
+    }
+
+    function renderMarkdownToHtml(markdown) {
+      const source = preprocessMarkdownSyntax(markdown);
+      const html =
+        window.marked && typeof marked.parse === "function"
+          ? marked.parse(source)
+          : escapeHtml(source).replace(/\n/g, "<br>");
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      enhanceRenderedMarkdown(doc.body);
+      sanitizeHtmlContainer(doc.body);
+      return doc.body.innerHTML;
+    }
+
+    function preprocessMarkdownSyntax(markdown) {
+      return String(markdown || "").replace(
+        /^<((!\[[^\]]*]\([^)]+\)(?:\s*,\s*)?)+)>\s*$/gm,
+        (_, group) => renderImageFlowFromMarkdown(group),
+      );
+    }
+
+    function renderImageFlowFromMarkdown(group) {
+      const images = [];
+      const reg = /!\[([^\]]*)]\(([^)]+)\)/g;
+      let match;
+      while ((match = reg.exec(group))) {
+        const alt = escapeHtml(match[1] || "图片");
+        const src = match[2] || "";
+        if (!isSafeUrl(src, "image")) continue;
+        images.push(
+          `<section class="imageflow-layer3"><img class="imageflow-img" src="${escapeHtml(src)}" alt="${alt}"></section>`,
+        );
+      }
+      if (!images.length) return escapeHtml(group);
+      return `<section class="imageflow-layer1"><section class="imageflow-layer2">${images.join("")}</section></section><p class="imageflow-caption">左右滑动查看更多</p>`;
+    }
+
+    function enhanceRenderedMarkdown(root) {
+      normalizeTaskListMarkup(root);
+      normalizeGithubAlertBlocks(root);
+      wrapWechatTables(root);
+    }
+
+    function normalizeTaskListMarkup(root) {
+      root.querySelectorAll('li input[type="checkbox"]').forEach((input) => {
+        const li = input.closest("li");
+        if (li) li.classList.add("task-list-item");
+        input.setAttribute("disabled", "");
+      });
+    }
+
+    function normalizeGithubAlertBlocks(root) {
+      const labels = {
+        NOTE: "提示",
+        TIP: "建议",
+        IMPORTANT: "重点",
+        WARNING: "注意",
+        CAUTION: "警告",
+      };
+      root.querySelectorAll("blockquote").forEach((quote) => {
+        const first = quote.querySelector("p, strong, span") || quote.firstElementChild;
+        const text = (first?.textContent || "").trim();
+        const match = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)]\s*/i.exec(text);
+        if (!match) return;
+        const type = match[1].toUpperCase();
+        quote.classList.add("md-alert", `md-alert-${type.toLowerCase()}`);
+        const title = document.createElement("span");
+        title.className = "md-alert-title";
+        title.textContent = labels[type] || "提示";
+        quote.insertBefore(title, quote.firstChild);
+        if (first) {
+          first.textContent = text.replace(match[0], "").trim();
+          if (!first.textContent.trim()) first.remove();
+        }
+      });
+    }
+
+    function wrapWechatTables(root) {
+      root.querySelectorAll("table").forEach((table) => {
+        if (table.parentElement?.classList.contains("table-scroll")) return;
+        const wrapper = document.createElement("div");
+        wrapper.className = "table-scroll";
+        table.parentNode.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+      });
     }
 
     function sanitizePastedHtml(html) {
@@ -4294,6 +4480,184 @@
       });
     }
 
+    function applyWechatComponentInlineStyles(root) {
+      if (!root) return;
+      wrapWechatTables(root);
+
+      root.querySelectorAll(".table-scroll").forEach((wrapper) => {
+        wrapper.style.maxWidth = "100%";
+        wrapper.style.overflowX = "auto";
+        wrapper.style.overflowY = "hidden";
+        wrapper.style.webkitOverflowScrolling = "touch";
+        wrapper.style.margin = wrapper.style.margin || "18px 0";
+      });
+
+      root.querySelectorAll("table").forEach((table) => {
+        if (table.getAttribute("data-code-shell") === "1") return;
+        table.style.borderCollapse = "collapse";
+        table.style.tableLayout = "auto";
+        table.style.width = table.style.width || "auto";
+        table.style.minWidth = table.style.minWidth || "100%";
+        table.style.fontSize = table.style.fontSize || "13px";
+        table.style.lineHeight = table.style.lineHeight || "1.45";
+      });
+
+      root.querySelectorAll("th, td").forEach((cell) => {
+        if (cell.closest('[data-code-shell="1"]')) return;
+        cell.style.padding = cell.style.padding || "6px 8px";
+        cell.style.whiteSpace = "normal";
+        cell.style.wordBreak = "break-word";
+        cell.style.overflowWrap = "anywhere";
+        cell.style.textAlign = cell.style.textAlign || "center";
+      });
+
+      root.querySelectorAll(".imageflow-layer1").forEach((node) => {
+        node.style.maxWidth = "100%";
+        node.style.overflowX = "auto";
+        node.style.overflowY = "hidden";
+        node.style.webkitOverflowScrolling = "touch";
+        node.style.margin = node.style.margin || "18px 0 8px";
+        node.style.paddingBottom = node.style.paddingBottom || "8px";
+      });
+
+      root.querySelectorAll(".imageflow-layer2").forEach((node) => {
+        node.style.display = "flex";
+        node.style.gap = "12px";
+        node.style.width = "max-content";
+        node.style.maxWidth = "none";
+      });
+
+      root.querySelectorAll(".imageflow-layer3").forEach((node) => {
+        node.style.width = "260px";
+        node.style.flex = "0 0 auto";
+      });
+
+      root.querySelectorAll(".imageflow-img").forEach((img) => {
+        img.style.width = "100%";
+        img.style.height = "auto";
+        img.style.margin = "0";
+        img.style.display = "block";
+      });
+
+      root.querySelectorAll(".imageflow-caption").forEach((node) => {
+        node.style.textAlign = "center";
+        node.style.fontSize = "12px";
+        node.style.opacity = "0.62";
+      });
+
+      root.querySelectorAll(".md-alert").forEach((node) => {
+        node.style.margin = node.style.margin || "18px 0";
+        node.style.padding = node.style.padding || "12px 14px";
+        node.style.borderLeft = node.style.borderLeft || "4px solid currentColor";
+        node.style.borderRadius = node.style.borderRadius || "10px";
+      });
+
+      root.querySelectorAll(".md-alert-title").forEach((node) => {
+        node.style.display = "block";
+        node.style.marginBottom = "4px";
+        node.style.fontWeight = "800";
+      });
+    }
+
+    function isZeroSpacingValue(value) {
+      const normalized = String(value || "").trim().toLowerCase();
+      if (!normalized) return true;
+      return normalized.split(/\s+/).every((token) => token === "0" || token === "0px" || token === "0%");
+    }
+
+    function isTransparentCssValue(value) {
+      const normalized = String(value || "").replace(/\s+/g, "").toLowerCase();
+      if (!normalized) return true;
+      if (normalized === "transparent" || normalized === "none") return true;
+      if (/^rgba?\(0,0,0,0\)$/.test(normalized)) return true;
+      return /^#[0-9a-f]{8}$/.test(normalized) && normalized.slice(7, 9) === "00";
+    }
+
+    function mergeSpacingValue(existing, extra) {
+      if (isZeroSpacingValue(existing)) return extra;
+      if (String(existing).trim().toLowerCase() === "auto") return extra;
+      return `calc(${existing} + ${extra})`;
+    }
+
+    function hasDirectTextContent(element) {
+      return Array.from(element.childNodes).some(
+        (node) => node.nodeType === Node.TEXT_NODE && (node.textContent || "").trim(),
+      );
+    }
+
+    function convertCheckboxesForWechat(root) {
+      root.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+        const marker = document.createElement("span");
+        marker.textContent = input.checked || input.hasAttribute("checked") ? "☑ " : "☐ ";
+        marker.style.fontWeight = "700";
+        input.replaceWith(marker);
+      });
+    }
+
+    function normalizeCopyContainerForWechat(container) {
+      const root = container.firstElementChild instanceof HTMLElement
+        ? container.firstElementChild
+        : container;
+      if (!(root instanceof HTMLElement)) return;
+
+      const bg =
+        root.style.getPropertyValue("background-color") ||
+        root.style.getPropertyValue("background");
+      const rootBg = bg && !isTransparentCssValue(bg) ? bg : "";
+      root.style.removeProperty("background");
+      root.style.removeProperty("background-color");
+
+      const paddingLeft = root.style.getPropertyValue("padding-left");
+      const paddingRight = root.style.getPropertyValue("padding-right");
+      const paddingTop = root.style.getPropertyValue("padding-top");
+      const paddingBottom = root.style.getPropertyValue("padding-bottom");
+      const children = Array.from(root.children).filter((node) => node instanceof HTMLElement);
+
+      children.forEach((child) => {
+        if (!isZeroSpacingValue(paddingLeft)) {
+          child.style.marginLeft = mergeSpacingValue(child.style.marginLeft, paddingLeft);
+        }
+        if (!isZeroSpacingValue(paddingRight)) {
+          child.style.marginRight = mergeSpacingValue(child.style.marginRight, paddingRight);
+        }
+        const hasBg =
+          child.style.getPropertyValue("background") ||
+          child.style.getPropertyValue("background-color") ||
+          child.style.getPropertyValue("background-image");
+        if (rootBg && !hasBg && !child.closest('[data-code-shell="1"]')) {
+          child.style.backgroundColor = rootBg;
+        }
+      });
+
+      if (!isZeroSpacingValue(paddingTop) || !isZeroSpacingValue(paddingBottom)) {
+        const spacer = document.createElement("div");
+        spacer.style.display = "block";
+        spacer.style.width = "100%";
+        if (!isZeroSpacingValue(paddingTop)) spacer.style.paddingTop = paddingTop;
+        if (!isZeroSpacingValue(paddingBottom)) spacer.style.paddingBottom = paddingBottom;
+        while (root.firstChild) spacer.appendChild(root.firstChild);
+        root.appendChild(spacer);
+      }
+
+      root.style.removeProperty("padding");
+      root.style.removeProperty("padding-left");
+      root.style.removeProperty("padding-right");
+      root.style.removeProperty("padding-top");
+      root.style.removeProperty("padding-bottom");
+
+      const baseColor = root.style.getPropertyValue("color") || "#1a1a1a";
+      const walk = (node, inheritedColor) => {
+        if (!(node instanceof HTMLElement)) return;
+        const own = node.style.getPropertyValue("color");
+        const effective = own || inheritedColor;
+        if (hasDirectTextContent(node) && !own) {
+          node.style.color = effective;
+        }
+        Array.from(node.children).forEach((child) => walk(child, effective));
+      };
+      walk(root, baseColor);
+    }
+
     htmlContent = sanitizePastedHtml(htmlContent);
     editor.value = htmlContent;
     editorRich.innerHTML = htmlContent;
@@ -4303,13 +4667,19 @@
         inlineImages = false,
         useCodeShell = true,
         enforceCodeContrast = true,
+        normalizeWechatCopy = true,
       } = options;
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, "text/html");
       sanitizeHtmlContainer(doc.body);
       convertGridToTable(doc);
+      applyWechatComponentInlineStyles(doc.body);
       if (useCodeShell) normalizeCodeBlockStyles(doc.body);
       if (enforceCodeContrast) enforceCodeBlockContrast(doc.body);
+      if (normalizeWechatCopy) {
+        convertCheckboxesForWechat(doc.body);
+        normalizeCopyContainerForWechat(doc.body);
+      }
       const imageResult = inlineImages ? await inlineImagesForCopy(doc.body) : null;
       return {
         html: doc.body.innerHTML,
@@ -4411,7 +4781,7 @@
     }
 
     function renderHistoryList() {
-      if (historyCount) historyCount.textContent = `${articleHistory.length}/20`;
+      if (historyCount) historyCount.textContent = `${articleHistory.length}/30`;
       if (!historyList) return;
       if (!articleHistory.length) {
         historyList.innerHTML = `<div class="history-empty"><p>暂无历史记录</p><span>点击保存后，会在这里保留常用版本。</span></div>`;
@@ -4492,11 +4862,20 @@
       };
       currentArticleId = article.id;
       articleHistory.unshift(article);
-      articleHistory = articleHistory.slice(0, 20);
+      articleHistory = articleHistory.slice(0, 30);
       saveArticleHistoryStore();
       renderHistoryList();
       updateStatusBadge("已保存到历史");
       if (!silent) showCopyToast("已保存到历史记录。");
+    }
+
+    function scheduleAutoHistorySnapshot() {
+      window.clearTimeout(autoHistoryTimer);
+      autoHistoryTimer = window.setTimeout(() => {
+        const text = getCurrentDocumentText();
+        if (text.length < 20) return;
+        saveToHistory({ silent: true });
+      }, 15000);
     }
 
     function loadFromHistory(articleId) {
@@ -4780,6 +5159,7 @@
       updateStatusBadge("编辑中");
       updatePreview();
       syncScroll(true);
+      scheduleAutoHistorySnapshot();
     });
     editor.addEventListener("scroll", () => {
       if (editorMode !== "html") return;
@@ -4791,6 +5171,7 @@
       updateStatusBadge("编辑中");
       updatePreview();
       syncScroll(true);
+      scheduleAutoHistorySnapshot();
     });
     editorRich.addEventListener("scroll", () => {
       if (editorMode !== "rich") return;
