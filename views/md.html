@@ -1003,6 +1003,7 @@
       display: grid;
       gap: 8px;
       overflow: auto;
+      overflow-anchor: none;
       padding-right: 4px;
       padding-bottom: 6px;
       flex: 1;
@@ -1018,13 +1019,12 @@
       gap: 6px;
       cursor: pointer;
       background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(250,250,252,0.98) 100%);
-      transition: all 180ms ease;
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
       box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
       min-height: 174px;
     }
 
     .theme-card:hover {
-      transform: translateY(-1px);
       border-color: rgba(148, 163, 184, 0.55);
       box-shadow: 0 16px 34px rgba(15, 23, 42, 0.1);
     }
@@ -2846,19 +2846,16 @@
         .join("");
 
       themeList.querySelectorAll(".theme-card").forEach((card) => {
-        card.addEventListener("click", () => {
+        card.addEventListener("click", (event) => {
+          event.preventDefault();
           const id = card.dataset.theme;
           const theme = themes.find((t) => t.id === id);
           if (!theme) return;
-          const previousScrollTop = themeList.scrollTop;
           currentTheme = theme;
           customStyle.accent = theme.accent;
           setThemeCardActiveState();
           applyTheme(theme);
           updatePreview();
-          requestAnimationFrame(() => {
-            themeList.scrollTop = previousScrollTop;
-          });
         });
       });
     }
