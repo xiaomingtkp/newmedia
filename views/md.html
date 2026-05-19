@@ -2850,12 +2850,22 @@
           const id = card.dataset.theme;
           const theme = themes.find((t) => t.id === id);
           if (!theme) return;
+          const previousScrollTop = themeList.scrollTop;
           currentTheme = theme;
           customStyle.accent = theme.accent;
-          renderThemes();
+          setThemeCardActiveState();
           applyTheme(theme);
           updatePreview();
+          requestAnimationFrame(() => {
+            themeList.scrollTop = previousScrollTop;
+          });
         });
+      });
+    }
+
+    function setThemeCardActiveState() {
+      themeList.querySelectorAll(".theme-card").forEach((card) => {
+        card.classList.toggle("active", card.dataset.theme === currentTheme.id);
       });
     }
 
