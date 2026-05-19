@@ -664,6 +664,9 @@
     #searchInput,
     .sidebar-tools input,
     .sidebar-tools select {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
       border: 1px solid var(--line);
       background: rgba(255,255,255,0.86);
       border-radius: 12px;
@@ -814,6 +817,8 @@
       display: grid;
       gap: 7px;
       padding: 8px;
+      min-width: 0;
+      overflow: hidden;
       border: 1px solid rgba(226, 232, 240, 0.92);
       border-radius: 16px;
       background: rgba(255,255,255,0.9);
@@ -1015,7 +1020,7 @@
       background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(250,250,252,0.98) 100%);
       transition: all 180ms ease;
       box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
-      min-height: 208px;
+      min-height: 174px;
     }
 
     .theme-card:hover {
@@ -1035,8 +1040,9 @@
       border-radius: 12px;
       border: 1px solid rgba(226, 232, 240, 0.85);
       padding: 10px 10px 8px;
-      min-height: 98px;
-      max-height: 98px;
+      height: 104px;
+      min-height: 0;
+      max-height: none;
       display: grid;
       align-content: start;
       gap: 6px;
@@ -1081,18 +1087,18 @@
 
     .theme-sample.theme-sample-raw {
       /* Reserve a small top-safe zone to avoid clipping top borders on hover */
-      padding: 10px 0 0;
+      padding: 12px 0 0;
     }
 
     .theme-sample-render {
       min-height: 156px;
       overflow: hidden;
-      transform: translateY(2px) scale(0.35);
+      transform: translateY(0) scale(0.31);
       transform-origin: top left;
-      width: 286%;
+      width: 323%;
       pointer-events: none;
-      padding-top: 6px;
-      margin-top: -2px;
+      padding-top: 8px;
+      margin-top: 0;
     }
 
     .theme-sample-render > div > *:first-child {
@@ -1108,6 +1114,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
+      min-width: 0;
       font-size: 11px;
       color: var(--muted);
     }
@@ -1115,9 +1122,14 @@
     .theme-meta strong {
       font-size: 11px;
       color: #111827;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .theme-meta span {
+      flex: 0 0 auto;
       padding: 3px 8px;
       border-radius: 999px;
       background: #f8fafc;
@@ -2111,6 +2123,215 @@
         },
       },
     });
+    // WeMD theme pack converted from /templates CSS. Keep these keys separate
+    // so the right theme panel can expose WeMD's visual language directly.
+    Object.assign(HUASHENG_RAW_STYLES, {
+      "wemd-aurora-glass": {
+        name: "WeMD 极光玻璃",
+        styles: {
+        container: "padding: 24px 20px; max-width: 677px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, \"Helvetica Neue\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", sans-serif; color: #333; background-color: transparent; word-break: break-word",
+        h1: "margin-top: 60px; margin-bottom: 50px; text-align: center; ; font-size: 26px; font-weight: 800; display: inline-block; background-image: linear-gradient(135deg, #4158D0 0%, #C850C0 46%, #FFCC70 100%); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1.4; padding-bottom: 10px; border-bottom: 2px solid #eee; border-image: linear-gradient(135deg, #4158D0 0%, #C850C0 100%) 1",
+        h2: "margin-top: 60px; margin-bottom: 30px; text-align: left; ; display: inline-block; font-size: 18px; font-weight: 700; color: #fff; background-image: linear-gradient(90deg, #4158D0 0%, #C850C0 100%); padding: 8px 18px; border-radius: 20px 20px 20px 4px; box-shadow: 0 8px 16px rgba(200, 80, 192, 0.3); line-height: 1.2",
+        h3: "margin-top: 35px; margin-bottom: 15px; ; font-size: 17px; font-weight: 700; color: #333; display: inline-block; position: relative; background: linear-gradient(90deg, rgba(65, 88, 208, 0.2) 0%, rgba(200, 80, 192, 0.2) 100%); background-size: 100% 40%; background-repeat: no-repeat; background-position: 0 90%; padding: 0 4px",
+        h4: "margin-top: 24px; margin-bottom: 12px; text-align: left; ; display: inline-block; font-size: 16px; font-weight: 700; color: #4158D0; background-color: #f0f2ff; padding: 4px 12px; border-radius: 12px; line-height: 1.4",
+        p: "margin-top: 22px; margin-bottom: 22px; line-height: 1.9; letter-spacing: 0.6px; text-align: justify; color: #444; font-size: 16px",
+        strong: "font-weight: 700; background-image: linear-gradient(135deg, #4158D0 0%, #C850C0 100%); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0 1px",
+        em: "color: #C850C0; font-style: italic",
+        a: "color: #C850C0; text-decoration: none; border-bottom: 1px dashed #C850C0; font-weight: 600; padding-bottom: 1px",
+        ul: "list-style-type: disc; padding-left: 20px; margin: 20px 0; color: #C850C0",
+        ol: "list-style-type: decimal; padding-left: 20px; margin: 20px 0; color: #4158D0; font-weight: bold",
+        li: "margin-bottom: 10px; line-height: 1.8; ; margin-bottom: 10px; line-height: 1.8",
+        blockquote: "margin: 36px 0; padding: 24px; background-color: #fff; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: -4px -4px 10px rgba(255, 255, 255, 0.8), 4px 4px 20px rgba(65, 88, 208, 0.1); border-radius: 16px; border-top: 4px solid #C850C0; overflow: visible !important",
+        hr: "margin: 60px auto; border: 0; height: 2px; background-image: linear-gradient(90deg, rgba(247, 249, 252, 0) 0%, #C850C0 50%, rgba(247, 249, 252, 0) 100%); width: 80%",
+        img: "display: block; margin: 40px auto; width: 100%; border-radius: 12px; box-shadow: 0 15px 35px rgba(65, 88, 208, 0.12)",
+        table: "width: 100%; border-collapse: collapse; margin: 40px 0; font-size: 14px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); border: 1px solid #f0f0f0",
+        },
+      },
+      "wemd-neo-brutalism": {
+        name: "WeMD 新粗野",
+        styles: {
+        container: "padding: 30px 20px; max-width: 677px; margin: 0 auto; font-family: -apple-system, \"Helvetica Neue\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; color: #000; background-color: transparent; word-break: break-word",
+        h1: "margin-top: 60px; margin-bottom: 50px; text-align: center; ; display: inline-block; font-size: 24px; font-weight: 900; color: #000; background-color: #CCFF00; border: 3px solid #000; padding: 12px 20px; box-shadow: 6px 6px 0px #000; line-height: 1.3",
+        h2: "margin-top: 60px; margin-bottom: 30px; text-align: left; border-bottom: 3px solid #000; padding-bottom: 10px; ; display: inline-block; font-size: 20px; font-weight: 800; color: #fff; background-color: #6A00FF; padding: 8px 16px; border: 2px solid #000; box-shadow: 4px -4px 0px #000; line-height: 1.2",
+        h3: "margin-top: 40px; margin-bottom: 20px; ; display: inline-block; font-size: 18px; font-weight: 800; color: #000; padding-left: 12px; border-left: 8px solid #CCFF00; line-height: 1.2",
+        h4: "margin-top: 30px; margin-bottom: 15px; text-align: left; ; display: inline-block; font-size: 16px; font-weight: 700; color: #fff; background-color: #000; padding: 6px 12px; border-radius: 0; line-height: 1.4",
+        p: "margin-top: 24px; margin-bottom: 24px; line-height: 1.8; letter-spacing: 0.5px; text-align: justify; color: #111; font-size: 16px; font-weight: 400",
+        strong: "color: #fff; background-color: #6A00FF; font-weight: 700; padding: 2px 6px; margin: 0 2px; border: 1px solid #000",
+        em: "color: #6A00FF; font-style: italic; font-weight: bold",
+        a: "color: #000; text-decoration: none; border-bottom: 2px solid #000; background: linear-gradient(180deg, transparent 60%, #CCFF00 0); font-weight: 700; padding: 0 2px; transition: all 0.2s",
+        ul: "list-style-type: square; padding-left: 20px; margin: 20px 0; color: #6A00FF",
+        ol: "list-style-type: decimal; padding-left: 20px; margin: 20px 0; color: #000; font-weight: 900",
+        li: "margin-bottom: 12px; line-height: 1.75; ; margin-bottom: 12px; line-height: 1.75; border-bottom: 1px solid #eee; padding-bottom: 8px",
+        blockquote: "margin: 40px 0; padding: 24px; background-color: #f4f4f4; border: 2px solid #000; box-shadow: 6px 6px 0px #6A00FF; overflow: visible !important",
+        hr: "margin: 60px auto; border: 0; height: 4px; background: #000; width: 100%",
+        img: "display: block; margin: 40px auto; width: 100%; border: 2px solid #000; box-shadow: 8px 8px 0px #000; padding: 0; background: #fff",
+        table: "width: 100%; border-collapse: collapse; margin: 40px 0; font-size: 14px; border: 2px solid #000; box-shadow: 6px 6px 0px #000",
+        },
+      },
+      "wemd-luxury-gold": {
+        name: "WeMD 黑金奢华",
+        styles: {
+        container: "padding: 40px 22px; max-width: 677px; margin: 0 auto; font-family: \"Songti SC\", \"SimSun\", \"STSong\", \"Georgia\", serif; color: #222; background-color: transparent; word-break: break-word",
+        h1: "margin: 70px 0 50px; text-align: center; ; font-size: 26px; font-weight: normal; color: #000; display: block; letter-spacing: 3px; border-bottom: 1px solid #000; padding-bottom: 20px",
+        h2: "margin: 50px 0 30px; text-align: center; ; display: inline-block; font-size: 19px; font-weight: normal; color: #9E8045; border-top: 1px solid #9E8045; border-bottom: 1px solid #9E8045; padding: 10px 24px; letter-spacing: 1px",
+        h3: "margin: 40px 0 20px; text-align: center; ; font-size: 17px; font-weight: bold; color: #000; text-transform: uppercase; letter-spacing: 1px",
+        h4: "margin: 30px 0 15px; text-align: center; ; font-size: 16px; font-weight: normal; color: #9E8045; border-bottom: 1px solid #eee; padding-bottom: 4px",
+        p: "margin: 30px 0; line-height: 2.0; text-align: justify; color: #444; font-size: 16px",
+        strong: "color: #9E8045; font-weight: bold; margin: 0 2px",
+        em: "color: #9E8045; font-style: italic",
+        a: "color: #000; border-bottom: 1px solid #9E8045; text-decoration: none; transition: opacity 0.2s",
+        ul: "list-style: square; padding-left: 20px; margin: 20px 0; color: #9E8045",
+        ol: "list-style: decimal; padding-left: 20px; margin: 20px 0; color: #9E8045",
+        li: "margin-bottom: 10px; ; margin-bottom: 10px",
+        blockquote: "margin: 40px 0; padding: 20px 30px; background: #fff; border: none; text-align: center; border-left: none",
+        hr: "margin: 60px auto; height: 1px; background: #9E8045; width: 40px; border: none",
+        img: "display: block; margin: 50px auto; width: 100%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06)",
+        table: "width: 100%; border-collapse: collapse; margin: 40px 0; font-size: 14px; border-top: 1px solid #000; border-bottom: 1px solid #000",
+        },
+      },
+      "wemd-morandi-forest": {
+        name: "WeMD 莫兰迪森林",
+        styles: {
+        container: "padding: 30px 22px; max-width: 677px; margin: 0 auto; font-family: \"Optima\", \"Georgia\", \"PingFang SC\", \"Microsoft YaHei\", serif; color: #2F3E32; background-color: transparent; word-break: break-word",
+        h1: "margin-top: 60px; margin-bottom: 50px; text-align: center; ; display: inline-block; font-size: 24px; font-weight: normal; color: #1A261D; padding: 12px 24px; border: 1px solid #739072; border-radius: 2px; background-color: #F1F4F0; letter-spacing: 2px",
+        h2: "margin-top: 50px; margin-bottom: 24px; text-align: left; border-bottom: 1px solid #E8EBE9; padding-bottom: 10px; ; display: inline-block; font-size: 19px; font-weight: 700; color: #4F6F52; padding-left: 12px; border-left: 5px solid #4F6F52; line-height: 1.2; letter-spacing: 1px",
+        h3: "margin-top: 40px; margin-bottom: 20px; text-align: center; ; font-size: 17px; font-weight: bold; color: #739072; display: inline-block; border-bottom: 2px dotted #739072; padding-bottom: 4px",
+        h4: "margin-top: 30px; margin-bottom: 15px; text-align: left; ; display: inline-block; font-size: 15px; font-weight: 700; color: #fff; background-color: #86A789; padding: 4px 10px; border-radius: 4px; line-height: 1.4",
+        p: "margin-top: 26px; margin-bottom: 26px; line-height: 2.0; letter-spacing: 0.5px; text-align: justify; color: #3A4D39; font-size: 16px",
+        strong: "color: #1A261D; font-weight: 700; background: linear-gradient(to top, rgba(134, 167, 137, 0.4) 50%, transparent 50%); margin: 0 2px; padding: 0 2px",
+        em: "color: #739072; font-style: italic",
+        a: "color: #4F6F52; text-decoration: none; border-bottom: 1px solid #4F6F52; font-weight: 600; padding-bottom: 0px",
+        ul: "list-style-type: disc; padding-left: 20px; margin: 20px 0; color: #86A789",
+        ol: "list-style-type: decimal; padding-left: 20px; margin: 20px 0; color: #4F6F52; font-weight: bold",
+        li: "margin-bottom: 12px; line-height: 1.8; ; margin-bottom: 12px; line-height: 1.8",
+        blockquote: "margin: 36px 0; padding: 24px; background-color: #F6F8F6; border: 1px dashed #739072; border-radius: 8px; overflow: visible !important",
+        hr: "margin: 60px auto; border: 0; height: 1px; background-color: #D2D4D4; width: 60%",
+        img: "display: block; margin: 40px auto; width: 100%; border-radius: 2px; box-shadow: 0 8px 20px rgba(79, 111, 82, 0.15); padding: 6px; background: #fff; border: 1px solid #eee",
+        table: "width: 100%; border-collapse: collapse; margin: 40px 0; font-size: 14px; border: 1px solid #D2D4D4",
+        },
+      },
+      "wemd-bauhaus": {
+        name: "WeMD 包豪斯",
+        styles: {
+        container: "padding: 30px 22px; max-width: 677px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, \"Microsoft YaHei\", sans-serif; color: #111; background-color: transparent; border-top: 8px solid #D32F2F; border-bottom: 8px solid #1976D2; word-break: break-word",
+        h1: "margin: 60px 0 40px; text-align: left; ; font-size: 26px; font-weight: 900; color: #fff; background: #D32F2F; padding: 15px 25px; display: inline-block; box-shadow: 6px 6px 0 #111; border: 2px solid #111",
+        h2: "margin: 50px 0 25px; text-align: left; display: flex; align-items: center; ; font-size: 20px; font-weight: bold; color: #111; position: relative; padding-left: 20px; border-left: 10px solid #1976D2",
+        h3: "margin: 30px 0 15px; ; font-size: 18px; font-weight: bold; color: #111; border-bottom: 5px solid #FBC02D; display: inline-block; padding-bottom: 2px",
+        h4: "margin: 20px 0 10px; ; font-size: 16px; font-weight: bold; color: #1976D2; background: #eee; padding: 4px 8px",
+        p: "margin: 24px 0; line-height: 1.8; text-align: justify; color: #333; font-size: 16px",
+        strong: "color: #D32F2F; font-weight: 900",
+        em: "font-style: italic; color: #1976D2; font-weight: bold",
+        a: "color: #111; text-decoration: none; background-color: rgba(25, 118, 210, 0.2); border-bottom: 1px solid #1976D2; padding: 0 2px; font-weight: bold",
+        ul: "list-style: square; padding-left: 20px; margin: 20px 0; color: #D32F2F",
+        ol: "list-style: decimal; padding-left: 20px; margin: 20px 0; color: #D32F2F; font-weight: bold",
+        blockquote: "margin: 30px 0; padding: 20px; background: #f9f9f9; border: 2px solid #111; box-shadow: 5px 5px 0 #D32F2F",
+        hr: "margin: 40px 0; border: none; height: 4px; background: #000",
+        img: "display: block; margin: 40px auto; width: 100%; border: 3px solid #111; box-shadow: 6px 6px 0 #1976D2",
+        table: "width: 100%; border-collapse: collapse; margin: 30px 0; border: 2px solid #111",
+        },
+      },
+      "wemd-cyberpunk-neon": {
+        name: "WeMD 赛博霓虹",
+        styles: {
+        container: "padding: 24px 20px; max-width: 677px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, \"Microsoft YaHei\", sans-serif; color: #333; background-color: transparent; word-break: break-word",
+        h1: "margin: 50px 0 40px; text-align: center; ; font-size: 26px; font-weight: 900; color: #12161F; display: inline-block; border: 2px solid #00F3FF; padding: 12px 24px; background: rgba(0, 243, 255, 0.1); box-shadow: 4px 4px 0px #FF00C1",
+        h2: "margin: 45px 0 25px; text-align: left; ; display: inline-block; font-size: 20px; font-weight: bold; color: #12161F; background: linear-gradient(90deg, #00F3FF, #00F3FF); padding: 6px 16px; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); border-radius: 4px",
+        h3: "margin: 30px 0 15px; ; font-size: 18px; font-weight: bold; color: #FF00C1; padding-left: 10px; border-left: 4px solid #FF00C1",
+        h4: "margin: 24px 0 10px; ; font-size: 16px; font-weight: bold; color: #00F3FF",
+        p: "margin: 22px 0; line-height: 1.75; text-align: justify; color: #444; font-size: 16px",
+        strong: "color: #FF00C1; font-weight: bold; text-shadow: 0 0 2px rgba(255, 0, 193, 0.4)",
+        em: "font-style: italic; color: #FF00C1; text-shadow: 0 0 3px rgba(255, 0, 193, 0.5)",
+        a: "color: #00F3FF; text-decoration: none; border-bottom: 1px dashed #00F3FF; transition: all 0.2s",
+        ul: "list-style: disc; padding-left: 20px; color: #00F3FF; margin: 20px 0",
+        ol: "list-style: decimal; padding-left: 20px; color: #FF00C1; font-weight: bold; margin: 20px 0",
+        blockquote: "margin: 30px 0; padding: 20px; background-color: rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.3); border-left: 4px solid #00F3FF",
+        hr: "margin: 50px 0; border: none; height: 2px; background: linear-gradient(90deg, transparent, #00F3FF, transparent); box-shadow: 0 0 10px rgba(0, 243, 255, 0.5)",
+        table: "width: 100%; border-collapse: separate; border-spacing: 0; margin: 30px 0; font-size: 14px; border: 1px solid rgba(0, 243, 255, 0.3); background: transparent",
+        },
+      },
+      "wemd-sunset-film": {
+        name: "WeMD 日落胶片",
+        styles: {
+        container: "padding: 30px 22px; max-width: 677px; margin: 0 auto; font-family: \"Songti SC\", \"SimSun\", \"STSong\", \"Georgia\", serif; color: #4A3B32; background-color: transparent; word-break: break-word",
+        h1: "margin-top: 60px; margin-bottom: 50px; text-align: center; border-top: 4px double #B33D25; border-bottom: 1px solid #B33D25; padding: 20px 0; ; font-size: 26px; font-weight: 900; color: #B33D25; display: inline-block; line-height: 1.2; letter-spacing: 3px",
+        h2: "margin-top: 50px; margin-bottom: 30px; text-align: left; ; display: inline-block; font-size: 19px; font-weight: bold; color: #FFFBF0; background-color: #B33D25; padding: 8px 16px; border-radius: 2px; box-shadow: 4px 4px 0px rgba(179, 61, 37, 0.2); line-height: 1.2",
+        h3: "margin-top: 40px; margin-bottom: 20px; ; font-size: 18px; font-weight: bold; color: #8D5B4C; display: inline-block; padding-left: 10px; border-left: 4px solid #D98C45",
+        h4: "margin-top: 30px; margin-bottom: 15px; text-align: left; ; display: inline-block; font-size: 16px; font-weight: bold; color: #B33D25; border-bottom: 2px solid #F2C94C; padding-bottom: 2px",
+        p: "margin-top: 26px; margin-bottom: 26px; line-height: 1.9; letter-spacing: 0.8px; text-align: justify; color: #5D4037; font-size: 16px",
+        strong: "color: #B33D25; font-weight: 900; margin: 0 2px",
+        em: "color: #D98C45; font-style: italic; font-weight: bold",
+        a: "color: #B33D25; text-decoration: none; border-bottom: 1px solid #B33D25; font-weight: bold; transition: opacity 0.2s",
+        ul: "list-style-type: square; padding-left: 20px; margin: 20px 0; color: #D98C45",
+        ol: "list-style-type: decimal; padding-left: 20px; margin: 20px 0; color: #B33D25; font-weight: bold; font-family: serif",
+        li: "margin-bottom: 12px; line-height: 1.8; ; margin-bottom: 12px; line-height: 1.8",
+        blockquote: "margin: 36px 0; padding: 24px; background-color: #F7EED6; border-left: 3px solid #8D5B4C; border-radius: 2px; overflow: visible !important",
+        hr: "margin: 60px auto; border: 0; height: 1px; border-top: 2px dashed #D98C45; width: 100%",
+        img: "display: block; margin: 40px auto; width: 95%; border: 8px solid #fff; box-shadow: 0 10px 25px rgba(93, 64, 55, 0.15); background: #fff",
+        table: "width: 100%; border-collapse: collapse; margin: 40px 0; font-size: 14px; border: 2px solid #8D5B4C",
+        },
+      },
+      "wemd-academic-paper": {
+        name: "WeMD 学术论文",
+        styles: {
+        container: "padding: 30px 20px; max-width: 677px; margin: 0 auto; font-family: \"Times New Roman\", \"Songti SC\", \"SimSun\", serif; color: #000; background-color: transparent; word-break: break-word",
+        h1: "margin: 40px 0 30px; text-align: center; line-height: 1.4; ; font-size: 22px; font-weight: bold; color: #000",
+        h2: "margin: 30px 0 15px; text-align: left; border-bottom: 2px solid #000; padding-bottom: 8px; ; font-size: 18px; font-weight: bold; color: #000",
+        h3: "margin: 20px 0 10px; ; font-size: 16px; font-weight: bold; color: #800000",
+        h4: "margin: 15px 0 5px; ; font-size: 16px; font-weight: bold; font-style: italic; color: #333",
+        p: "margin: 16px 0; line-height: 1.7; text-align: justify; text-indent: 0; color: #1a1a1a; font-size: 16px",
+        strong: "color: #000; font-weight: bold",
+        em: "font-style: italic; color: #000",
+        a: "color: #000080; text-decoration: underline",
+        ul: "list-style: disc; padding-left: 20px; margin: 16px 0",
+        ol: "list-style: decimal; padding-left: 20px; margin: 16px 0",
+        blockquote: "margin: 20px 0; padding: 16px 20px; background: #fafafa; border: 1px solid #ddd; border-left: 4px solid #666",
+        img: "display: block; margin: 30px auto; width: 100%; border: 1px solid #ddd",
+        table: "width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; border-top: 2px solid #000; border-bottom: 2px solid #000",
+        },
+      },
+      "wemd-knowledge-base": {
+        name: "WeMD 知识库",
+        styles: {
+        container: "padding: 30px 24px; max-width: 677px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"Helvetica Neue\", \"PingFang SC\", sans-serif; color: #37352F; background-color: transparent; word-break: break-word",
+        h1: "margin-top: 50px; margin-bottom: 40px; text-align: left; border-bottom: 1px solid #E3E2E0; padding-bottom: 20px; ; font-size: 28px; font-weight: 700; color: #37352F; display: inline-block; line-height: 1.2",
+        h2: "margin-top: 40px; margin-bottom: 20px; text-align: left; ; display: block; font-size: 22px; font-weight: 600; color: #37352F; padding: 8px 12px; background-color: #F7F6F3; border-radius: 4px; line-height: 1.3",
+        h3: "margin-top: 30px; margin-bottom: 12px; ; font-size: 18px; font-weight: 600; color: #37352F; display: inline-block; border-bottom: 3px solid #FDECC8; padding-bottom: 2px",
+        h4: "margin-top: 24px; margin-bottom: 8px; text-align: left; ; display: inline-block; font-size: 16px; font-weight: 600; color: #EB5757; line-height: 1.4",
+        p: "margin-top: 16px; margin-bottom: 16px; line-height: 1.75; letter-spacing: 0.2px; text-align: justify; color: #37352F; font-size: 16px",
+        strong: "color: #37352F; font-weight: 600; background-color: #FDECC8; padding: 2px 4px; margin: 0 2px; border-radius: 3px",
+        em: "color: #37352F; font-style: italic; opacity: 0.7",
+        a: "color: #37352F; text-decoration: none; border-bottom: 1px solid #999; font-weight: 500; transition: border-color 0.2s",
+        ul: "list-style-type: disc; padding-left: 24px; margin: 16px 0; color: #37352F",
+        ol: "list-style-type: decimal; padding-left: 24px; margin: 16px 0; color: #37352F; font-weight: 600",
+        li: "margin-bottom: 8px; line-height: 1.7; ; margin-bottom: 8px; line-height: 1.7",
+        blockquote: "margin: 24px 0; padding: 16px 16px 16px 20px; background-color: #F1F1EF; border: none; border-radius: 4px; border-left: 4px solid #37352F; overflow: visible !important",
+        hr: "margin: 40px auto; border: 0; height: 1px; background-color: #E3E2E0; width: 100%",
+        img: "display: block; margin: 30px auto; width: 100%; border-radius: 4px; box-shadow: none; border: 1px solid #E3E2E0",
+        table: "width: 100%; border-collapse: collapse; margin: 30px 0; font-size: 14px; border: 1px solid #E3E2E0; border-radius: 0",
+        },
+      },
+      "wemd-receipt": {
+        name: "WeMD 小票清单",
+        styles: {
+        container: "padding: 40px 20px; max-width: 677px; margin: 0 auto; font-family: \"Courier New\", \"SimSun\", \"Songti SC\", monospace; color: #111; background-color: transparent; border-top: 5px dashed #111; border-bottom: 5px dashed #111; word-break: break-word",
+        h1: "margin: 40px 0 30px; text-align: center; border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 15px 0; ; font-size: 26px; font-weight: 900; color: #000; letter-spacing: 2px; display: block; border: none",
+        h2: "margin: 30px 0 20px; text-align: center; ; display: block; font-size: 18px; font-weight: bold; color: #fff; background: #000; padding: 8px",
+        h3: "margin: 25px 0 10px; ; font-size: 16px; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 2px; display: inline-block",
+        h4: "margin: 20px 0 10px; text-align: left; ; font-size: 16px; font-weight: bold; color: #000; text-decoration: underline",
+        p: "margin: 18px 0; line-height: 1.6; text-align: justify; color: #222; font-size: 15px",
+        strong: "font-weight: 900; background: #ddd; padding: 0 4px",
+        em: "font-style: italic; color: #000",
+        a: "color: #000; text-decoration: underline; font-weight: bold",
+        ul: "list-style: none; padding-left: 10px; margin: 20px 0",
+        ol: "list-style: decimal; padding-left: 25px; margin: 20px 0; font-weight: bold",
+        li: "margin-bottom: 8px; border-bottom: 1px dotted #ccc; padding-bottom: 4px",
+        blockquote: "margin: 25px 0; padding: 15px; border: 1px dotted #000; font-size: 14px; text-align: left; background: #f8f8f8",
+        hr: "margin: 30px 0; border: none; border-top: 2px dashed #000",
+        img: "display: block; margin: 30px auto; width: 100%; border: 2px dashed #000; padding: 8px; background: #fff",
+        table: "width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; font-family: monospace",
+        },
+      },
+    });
 
     const themes = [
       {
@@ -2418,6 +2639,106 @@
         style: { h1: { underline: false }, h2: { underline: true }, h3: { bar: true }, blockquote: { bg: "#fffef9", border: false }, code: { bg: "#f9f9f9", text: "#2c2c2c" }, pBg: null },
       },
       {
+        id: "wemd-aurora-glass",
+        name: "WeMD 极光玻璃",
+        desc: "极光渐变和玻璃卡片，适合审美型文章。",
+        rawKey: "wemd-aurora-glass",
+        tags: ["推荐","品牌","文艺"],
+        accent: "#C850C0",
+        soft: "#F0F2FF",
+        text: "#333333",
+      },
+      {
+        id: "wemd-neo-brutalism",
+        name: "WeMD 新粗野",
+        desc: "粗边框、硬阴影和荧光撞色，适合强观点内容。",
+        rawKey: "wemd-neo-brutalism",
+        tags: ["推荐","信息","技术"],
+        accent: "#6A00FF",
+        soft: "#CCFF00",
+        text: "#000000",
+      },
+      {
+        id: "wemd-luxury-gold",
+        name: "WeMD 黑金奢华",
+        desc: "衬线字体与金色线框，适合品牌、商业和高端内容。",
+        rawKey: "wemd-luxury-gold",
+        tags: ["推荐","品牌","文艺"],
+        accent: "#9E8045",
+        soft: "#F7F2E7",
+        text: "#222222",
+      },
+      {
+        id: "wemd-morandi-forest",
+        name: "WeMD 莫兰迪森林",
+        desc: "低饱和森林色，适合生活方式和温和长文。",
+        rawKey: "wemd-morandi-forest",
+        tags: ["品牌","文艺","生活"],
+        accent: "#4F6F52",
+        soft: "#F1F4F0",
+        text: "#2F3E32",
+      },
+      {
+        id: "wemd-bauhaus",
+        name: "WeMD 包豪斯",
+        desc: "红黄蓝几何秩序，适合视觉冲击型内容。",
+        rawKey: "wemd-bauhaus",
+        tags: ["推荐","品牌","信息"],
+        accent: "#D32F2F",
+        soft: "#FBC02D",
+        text: "#111111",
+      },
+      {
+        id: "wemd-cyberpunk-neon",
+        name: "WeMD 赛博霓虹",
+        desc: "霓虹描边和科技切角，适合 AI、科技和趋势内容。",
+        rawKey: "wemd-cyberpunk-neon",
+        tags: ["推荐","技术","信息"],
+        accent: "#00F3FF",
+        soft: "#E9FBFF",
+        text: "#12161F",
+      },
+      {
+        id: "wemd-sunset-film",
+        name: "WeMD 日落胶片",
+        desc: "复古胶片暖色，适合故事、影像和旅行文章。",
+        rawKey: "wemd-sunset-film",
+        tags: ["文艺","生活"],
+        accent: "#B33D25",
+        soft: "#FFF7ED",
+        text: "#4A3B32",
+      },
+      {
+        id: "wemd-academic-paper",
+        name: "WeMD 学术论文",
+        desc: "论文式黑白结构，适合严肃知识和研究内容。",
+        rawKey: "wemd-academic-paper",
+        tags: ["教育","信息","极简"],
+        accent: "#800000",
+        soft: "#F8F8F8",
+        text: "#000000",
+      },
+      {
+        id: "wemd-knowledge-base",
+        name: "WeMD 知识库",
+        desc: "Notion 式知识库排版，适合教程和知识整理。",
+        rawKey: "wemd-knowledge-base",
+        tags: ["推荐","教育","信息"],
+        accent: "#37352F",
+        soft: "#F7F6F3",
+        text: "#37352F",
+      },
+      {
+        id: "wemd-receipt",
+        name: "WeMD 小票清单",
+        desc: "等宽字体与虚线票据感，适合清单和复盘内容。",
+        rawKey: "wemd-receipt",
+        tags: ["信息","极简"],
+        accent: "#111111",
+        soft: "#F7F7F7",
+        text: "#111111",
+      },
+      {
         id: "wired",
         name: "Wired 连线",
         desc: "高对比数字媒体风，适合科技趋势。",
@@ -2492,9 +2813,13 @@
     function renderThemes() {
       const query = searchInput.value.trim();
       const list = themes.filter((t) => {
-        const buckets = themeFilterMap[t.id] || [];
+        const buckets = themeFilterMap[t.id] || t.tags || [];
         const matchFilter = currentFilter === "全部" || buckets.includes(currentFilter);
-        const matchSearch = !query || t.name.includes(query) || t.desc.includes(query);
+        const matchSearch =
+          !query ||
+          t.name.includes(query) ||
+          t.desc.includes(query) ||
+          (t.tags || []).some((tag) => tag.includes(query));
         return matchFilter && matchSearch;
       });
       if (themeSummary) {
@@ -2509,7 +2834,7 @@
           <div class="theme-card ${t.id === currentTheme.id ? "active" : ""}" data-theme="${t.id}">
             <div class="theme-meta">
               <strong>${t.name}</strong>
-              <span>${(themeFilterMap[t.id] || ["推荐"])[0]}</span>
+              <span>${(themeFilterMap[t.id] || t.tags || ["推荐"])[0]}</span>
             </div>
             <div class="theme-sample ${getHuashengThemeStyle(t) ? "theme-sample-raw" : ""}" style="${buildThemeCardSampleStyle(t)}">
               ${buildThemeCardSampleMarkup(t)}
@@ -2551,7 +2876,7 @@
       if (raw) {
         return [
           normalizeCardContainerStyle(raw.container),
-          "min-height: 220px",
+          "height: 104px",
           "overflow: hidden",
           "border-radius: 20px",
           "box-shadow: 0 20px 44px rgba(15, 23, 42, 0.12)",
@@ -3970,19 +4295,34 @@
       "color",
       "background-color",
       "background",
+      "background-image",
+      "background-size",
+      "background-repeat",
+      "background-position",
+      "background-clip",
+      "-webkit-background-clip",
       "font-weight",
       "font-style",
       "text-decoration",
+      "text-decoration-color",
+      "text-underline-offset",
+      "text-transform",
+      "text-indent",
+      "text-shadow",
       "font-size",
       "font-family",
       "text-align",
       "line-height",
+      "letter-spacing",
       "border",
       "border-left",
       "border-right",
       "border-top",
       "border-bottom",
       "border-color",
+      "border-image",
+      "border-collapse",
+      "border-spacing",
       "border-radius",
       "padding",
       "padding-left",
@@ -3996,8 +4336,23 @@
       "margin-bottom",
       "width",
       "height",
+      "min-width",
       "max-width",
+      "max-height",
       "display",
+      "vertical-align",
+      "overflow",
+      "overflow-x",
+      "overflow-y",
+      "white-space",
+      "word-break",
+      "word-wrap",
+      "overflow-wrap",
+      "object-fit",
+      "opacity",
+      "box-shadow",
+      "filter",
+      "clip-path",
     ]);
 
     function isSafeUrl(url, type = "link") {
